@@ -12,6 +12,8 @@
         <router-link to="/execute" class="link" active-class="active">執行</router-link>
         <router-link to="/scoreboard" class="link" active-class="active">成績單</router-link>
         <router-link to="/scoretable" class="link" active-class="active">成績表</router-link>
+        <router-link to="/anticheat" class="link" active-class="active">防作弊</router-link>
+        <router-link to="/logviewer" class="link" active-class="active">學生日誌檢視器</router-link>
       </nav>
     </header>
 

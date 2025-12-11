@@ -53,8 +53,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { getAllStudentsScores } from "../utilities/api"; // ← 路徑依需求調整
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { io, Socket } from "socket.io-client";
+import { getAllStudentsScores, BASE_URL } from "../utilities/api"; // ← 路徑依需求調整
 
 type PuzzleResults = Record<string, boolean>;
 type StudentRecord = {
@@ -67,23 +68,30 @@ type StudentRecord = {
   puzzle_results: PuzzleResults;
 };
 
+type ScoresPayload = { success: boolean; result: StudentRecord[] };
+
 const records = ref<StudentRecord[]>([]);
 const loading = ref(false);
 const error = ref("");
 const keyword = ref("");
 
 const tableRef = ref<HTMLTableElement | null>(null);
+let socket: Socket | null = null;
+
+const applyData = (res: ScoresPayload) => {
+  if (res?.success && Array.isArray(res.result)) {
+    records.value = res.result;
+  } else {
+    throw new Error("回傳格式不正確");
+  }
+};
 
 const fetchData = async () => {
   loading.value = true;
   error.value = "";
   try {
     const res = await getAllStudentsScores();
-    if (res?.success && Array.isArray(res.result)) {
-      records.value = res.result;
-    } else {
-      throw new Error("回傳格式不正確");
-    }
+    applyData(res as ScoresPayload);
   } catch (e) {
     console.error(e);
     error.value = "載入失敗，請稍後再試";
@@ -92,7 +100,47 @@ const fetchData = async () => {
   }
 };
 
-onMounted(fetchData);
+const setupSocket = () => {
+  // 根據你的後端設定替換 URL，例如：const url = import.meta.env.VITE_SOCKET_URL;
+  const url = BASE_URL.replace("/admin", ""); // 預設同源，可依需求調整
+  socket = io(url, {
+    transports: ["websocket"], // 可依需求調整
+  });
+
+  socket.on("connect", () => {
+    console.log("socket connected");
+  });
+
+  socket.on("scoreUpdate", (payload: ScoresPayload) => {
+    console.log("收到 scoreUpdate 事件", payload);
+    try {
+      applyData(payload);
+    } catch (err) {
+      console.error("scoreUpdate payload 格式錯誤", err);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("socket disconnected");
+  });
+
+  socket.on("connect_error", (err) => {
+    console.error("socket connect_error", err);
+  });
+};
+
+onMounted(async () => {
+  await fetchData();
+  setupSocket();
+});
+
+onBeforeUnmount(() => {
+  if (socket) {
+    socket.off("scoreUpdate");
+    socket.disconnect();
+    socket = null;
+  }
+});
 
 const filtered = computed(() => {
   const kw = keyword.value.trim().toLowerCase();
