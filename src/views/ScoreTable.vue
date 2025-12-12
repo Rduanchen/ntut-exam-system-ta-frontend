@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <header class="header">
-      <h2>學生解題成績查詢（可複製到 Excel）</h2>
+      <h2>學生成績表</h2>
       <div class="actions">
         <input
           v-model="keyword"
@@ -30,11 +30,11 @@
           <tr>
             <th>學生編號</th>
             <th>姓名</th>
-            <th>最後提交時間</th>
-            <th>公式輸出</th>
-            <th>題組數</th>
-            <th>通過子題數</th>
             <th v-for="col in puzzleColumns" :key="col">{{ col }}</th>
+            <th>題目數</th>
+            <th>通過測資數</th>
+            <th>公式輸出</th>
+            <th>最後提交時間</th>
           </tr>
         </thead>
         <tbody>
@@ -46,13 +46,13 @@
           >
             <td>{{ rec.student_ID }}</td>
             <td>{{ rec.student_name }}</td>
-            <td>{{ formatTime(rec.last_submit_time) }}</td>
-            <td class="formula-cell">{{ formulaOutputs[rec.id] ?? "" }}</td>
-            <td>{{ rec.puzzle_amount }}</td>
-            <td>{{ rec.passed_puzzle_amount }}</td>
             <td v-for="col in puzzleColumns" :key="col">
               {{ formatBool(rec.puzzle_results[col]) }}
             </td>
+            <td>{{ rec.puzzle_amount }}</td>
+            <td>{{ rec.passed_puzzle_amount }}</td>
+            <td class="formula-cell">{{ formulaOutputs[rec.id] ?? "" }}</td>
+            <td>{{ formatTime(rec.last_submit_time) }}</td>
           </tr>
         </tbody>
       </table>
@@ -213,11 +213,11 @@ const filtered = computed(() => {
   );
 });
 
-/** 動態題組欄 */
+/** 動態題目欄 */
 const puzzleColumns = computed(() => {
   const set = new Set<string>();
   filtered.value.forEach((r) => {
-    Object.keys(r.puzzle_results || {}).forEach((k) => set.add(k));
+    Object.keys(r.puzzle_results || {}).filter((c)=>!c.endsWith("status")).forEach((k) => set.add(k));
   });
   return Array.from(set).sort((a, b) => a.localeCompare(b, "zh-Hant"));
 });
@@ -284,8 +284,8 @@ const formatTime = (iso: string | null) => {
 };
 
 const formatBool = (v: boolean | undefined) => {
-  if (v === true) return "TRUE";
-  if (v === false) return "FALSE";
+  if (v === true) return 1;
+  if (v === false) return 0;
   return "";
 };
 
@@ -295,8 +295,8 @@ const copyTable = async () => {
     "姓名",
     "最後提交時間",
     "公式輸出",
-    "題組數",
-    "通過子題數",
+    "題目數",
+    "通過測資數",
   ];
   const cols = [...baseCols, ...puzzleColumns.value];
 
@@ -330,7 +330,7 @@ const copyTable = async () => {
 <style scoped>
 .page {
   padding: 24px;
-  max-width: 1200px;
+  max-width: 90%;
   margin: 0 auto;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
     sans-serif;

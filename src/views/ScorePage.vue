@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <header class="header">
-      <h2>學生解題成績總覽</h2>
+      <h2>學生答題總覽</h2>
       <div class="actions">
         <button :disabled="loading" @click="fetchData">
           {{ loading ? "載入中..." : "重新整理" }}
@@ -32,7 +32,7 @@
               {{ rec.student_name }} ({{ rec.student_ID }})
             </div>
             <div class="meta">
-              題組數：{{ rec.puzzle_amount }}； 通過子題數：{{
+              題目數：{{ rec.puzzle_amount }}； 通過測資數：{{
                 rec.passed_puzzle_amount
               }}
             </div>
@@ -62,7 +62,7 @@
             class="puzzle-block"
           >
             <div class="puzzle-header">
-              <strong>題組 {{ puzzleNo }}</strong>
+              <strong>題目 {{ puzzleNo }}</strong>
               <span
                 class="badge"
                 :class="
@@ -307,7 +307,7 @@ const puzzleSubcases = (rec: StudentRecord, puzzleNo: number) => {
 
 const overallText = (rec: StudentRecord) => {
   return rec.passed_puzzle_amount > 0
-    ? `通過 ${rec.passed_puzzle_amount} 題`
+    ? `通過 ${rec.passed_puzzle_amount} 筆測資`
     : "尚未通過";
 };
 
