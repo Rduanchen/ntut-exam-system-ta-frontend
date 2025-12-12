@@ -32,9 +32,9 @@
     </section>
 
     <section class="card">
-      <h2>Restore</h2>
-      <button :disabled="loadingRestore" @click="runRestore">
-        {{ loadingRestore ? "Restoring..." : "Restore Service" }}
+      <h2>Reset Database</h2>
+      <button :disabled="loadingResetDatabase" @click="runResetDatabase">
+        {{ loadingResetDatabase ? "Resetting..." : "Reset Database Service" }}
       </button>
     </section>
 
@@ -49,7 +49,7 @@ import { ref } from "vue";
 import {
   initService,
   isConfigured as apiIsConfigured,
-  restoreService,
+  resetDatabaseService as resetDatabaseService,
 } from "../utilities/api";
 
 const isConfigured = ref<boolean | null>(null);
@@ -61,7 +61,7 @@ const message = ref<string>("");
 
 const loadingCheck = ref(false);
 const loadingInit = ref(false);
-const loadingRestore = ref(false);
+const loadingResetDatabase = ref(false);
 
 const checkStatus = async () => {
   loadingCheck.value = true;
@@ -119,20 +119,20 @@ const submitInit = async () => {
   }
 };
 
-const runRestore = async () => {
-  loadingRestore.value = true;
+const runResetDatabase = async () => {
+  loadingResetDatabase.value = true;
   message.value = "";
   try {
-    const ok = await restoreService();
-    message.value = ok ? "Restore succeeded" : "Restore failed";
+    const ok = await resetDatabaseService();
+    message.value = ok ? "Database reset succeeded" : "Database reset failed";
     if (ok) {
       await checkStatus();
     }
   } catch (err) {
     console.error(err);
-    message.value = "Restore error";
+    message.value = "Database reset error";
   } finally {
-    loadingRestore.value = false;
+    loadingResetDatabase.value = false;
   }
 };
 
