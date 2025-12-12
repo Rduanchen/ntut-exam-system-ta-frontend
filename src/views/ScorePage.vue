@@ -2,9 +2,12 @@
   <div class="page">
     <header class="header">
       <h2>學生解題成績總覽</h2>
-      <button :disabled="loading" @click="fetchData">
-        {{ loading ? "載入中..." : "重新整理" }}
-      </button>
+      <div class="actions">
+        <button :disabled="loading" @click="fetchData">
+          {{ loading ? "載入中..." : "重新整理" }}
+        </button>
+        <button :disabled="loading" @click="openFormulaModal">公式</button>
+      </div>
     </header>
 
     <div v-if="error" class="error">{{ error }}</div>
@@ -16,7 +19,13 @@
     </div>
 
     <div v-if="!loading && records.length > 0" class="list">
-      <div v-for="rec in records" :key="rec.id" class="card">
+      <div
+        v-for="rec in records"
+        :key="rec.id"
+        class="card"
+        :class="{ selected: rec.id === selectedId }"
+        @click="selectCard(rec.id)"
+      >
         <div class="card-top">
           <div>
             <div class="name">
@@ -33,6 +42,12 @@
                 formatTime(rec.last_submit_time)
               }}</span>
               <span v-else>未提交</span>
+            </div>
+            <div class="meta">
+              公式輸出：
+              <span class="formula-out">{{
+                formulaOutputs[rec.id] ?? ""
+              }}</span>
             </div>
           </div>
           <div class="status-chip" :class="overallClass(rec)">
@@ -77,12 +92,45 @@
         </div>
       </div>
     </div>
+
+    <!-- 公式編輯彈窗 -->
+    <div
+      v-if="showFormulaModal"
+      class="modal-backdrop"
+      @click.self="closeFormulaModal"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h3>編輯公式（JS）</h3>
+          <button class="close" @click="closeFormulaModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="tip">
+            輸入 JS 程式碼，系統會包成
+            <code>function(record) { /* 你的程式 */ }</code>。 請在程式碼中
+            <strong>return 數值或字串</strong>；<code>record</code>
+            為當前學生物件。
+          </p>
+          <textarea
+            v-model="formulaCode"
+            rows="10"
+            spellcheck="false"
+          ></textarea>
+          <div v-if="formulaError" class="error">{{ formulaError }}</div>
+        </div>
+        <div class="modal-footer">
+          <button @click="applyFormula">套用</button>
+          <button @click="closeFormulaModal">取消</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { getAllStudentsScores } from "../utilities/api"; // 請依實際路徑調整
+import { ref, onMounted, onBeforeUnmount, computed } from "vue";
+import { io, Socket } from "socket.io-client";
+import { getAllStudentsScores, BASE_URL } from "../utilities/api";
 
 type PuzzleResults = Record<string, boolean>;
 type StudentRecord = {
@@ -95,20 +143,43 @@ type StudentRecord = {
   puzzle_results: PuzzleResults;
 };
 
+type ScoresPayload = { success: boolean; result: StudentRecord[] };
+
+const LOCAL_STORAGE_KEY = "overview_formula_code_v1";
+
 const records = ref<StudentRecord[]>([]);
 const loading = ref(false);
 const error = ref("");
+
+const showFormulaModal = ref(false);
+const formulaCode = ref<string>(
+  `// 你可以使用變數 record（當前學生資料）\n// 請務必 return 數值或字串\nreturn record.student_name + " / " + record.passed_puzzle_amount;`
+);
+const formulaError = ref("");
+const formulaFn = ref<(r: StudentRecord) => unknown>(() => "");
+const selectedId = ref<number | null>(null);
+
+let socket: Socket | null = null;
+
+const selectCard = (id: number) => {
+  selectedId.value = id;
+};
+
+const applyData = (res: ScoresPayload) => {
+  if (res?.success && Array.isArray(res.result)) {
+    records.value = res.result;
+  } else {
+    throw new Error("回傳格式不正確");
+  }
+};
 
 const fetchData = async () => {
   loading.value = true;
   error.value = "";
   try {
     const res = await getAllStudentsScores();
-    if (res?.success && Array.isArray(res.result)) {
-      records.value = res.result;
-    } else {
-      throw new Error("回傳格式不正確");
-    }
+    console.log("Fetched scores:", res);
+    applyData(res as ScoresPayload);
   } catch (e) {
     console.error(e);
     error.value = "載入失敗，請稍後再試";
@@ -117,7 +188,90 @@ const fetchData = async () => {
   }
 };
 
-onMounted(fetchData);
+const setupSocket = () => {
+  const url = BASE_URL.replace("/admin", "");
+  socket = io(url, { transports: ["websocket"] });
+
+  socket.on("connect", () => console.log("socket connected"));
+  socket.on("scoreUpdate", (payload: ScoresPayload) => {
+    try {
+      applyData(payload);
+    } catch (err) {
+      console.error("scoreUpdate payload 格式錯誤", err);
+    }
+  });
+  socket.on("disconnect", () => console.log("socket disconnected"));
+  socket.on("connect_error", (err) =>
+    console.error("socket connect_error", err)
+  );
+};
+
+onMounted(async () => {
+  // 讀取儲存的公式
+  const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+  if (saved) {
+    formulaCode.value = saved;
+    try {
+      const fn = new Function("record", saved) as (r: StudentRecord) => unknown;
+      formulaFn.value = fn;
+    } catch (err) {
+      console.error("載入儲存公式錯誤", err);
+      formulaError.value = "儲存的公式有誤，請重新編輯";
+    }
+  }
+
+  await fetchData();
+  setupSocket();
+});
+
+onBeforeUnmount(() => {
+  if (socket) {
+    socket.off("scoreUpdate");
+    socket.disconnect();
+    socket = null;
+  }
+});
+
+/** 公式輸出：若公式出錯，顯示 "error" */
+const formulaOutputs = computed<Record<number, string>>(() => {
+  const out: Record<number, string> = {};
+  records.value.forEach((rec) => {
+    try {
+      const v = formulaFn.value(rec);
+      out[rec.id] = v === undefined ? "" : String(v);
+    } catch (err) {
+      out[rec.id] = "error";
+      console.error("公式執行錯誤", err);
+    }
+  });
+  return out;
+});
+
+const openFormulaModal = () => {
+  formulaError.value = "";
+  showFormulaModal.value = true;
+};
+const closeFormulaModal = () => {
+  showFormulaModal.value = false;
+  formulaError.value = "";
+};
+
+const applyFormula = () => {
+  try {
+    const fn = new Function("record", formulaCode.value) as (
+      r: StudentRecord
+    ) => unknown;
+    // 試跑一次避免語法錯誤
+    fn({} as StudentRecord);
+    formulaFn.value = fn;
+    localStorage.setItem(LOCAL_STORAGE_KEY, formulaCode.value);
+    formulaError.value = "";
+    showFormulaModal.value = false;
+  } catch (err: any) {
+    console.error(err);
+    formulaError.value = err?.message || "公式有誤，請檢查程式碼";
+  }
+};
 
 const formatTime = (iso: string) => {
   try {
@@ -176,6 +330,11 @@ const overallClass = (rec: StudentRecord) => {
   gap: 12px;
   margin-bottom: 16px;
 }
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 button {
   padding: 8px 12px;
   border: 1px solid #ccc;
@@ -206,6 +365,11 @@ button:disabled {
   padding: 16px;
   background: #fff;
   box-shadow: 0 2px 6px rgb(0 0 0 / 4%);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.card.selected {
+  background: #e7f1ff;
+  border-color: #bcd4ff;
 }
 .card-top {
   display: flex;
@@ -221,6 +385,10 @@ button:disabled {
 .meta {
   color: #666;
   margin-top: 2px;
+}
+.formula-out {
+  color: #0b7285;
+  font-weight: 600;
 }
 .status-chip {
   padding: 6px 10px;
@@ -288,5 +456,64 @@ button:disabled {
   background: #fdecea;
   color: #d93025;
   border-color: #f6c7c1;
+}
+
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+.modal {
+  background: #fff;
+  border-radius: 8px;
+  width: min(720px, 100%);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.16);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+}
+.modal-body {
+  padding: 12px 16px;
+  overflow: auto;
+}
+.modal-footer {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #eee;
+}
+.modal .close {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+}
+.modal textarea {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo,
+    monospace;
+  resize: vertical;
+}
+.tip {
+  margin-bottom: 8px;
+  color: #444;
+  font-size: 13px;
 }
 </style>

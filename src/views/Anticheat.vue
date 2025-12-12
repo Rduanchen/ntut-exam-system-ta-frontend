@@ -5,21 +5,28 @@
         <h3>警告系統</h3>
         <div class="actions">
           <label class="switch">
-            <input type="checkbox" v-model="realtimeOn" @change="toggleRealtime" />
+            <input
+              type="checkbox"
+              v-model="realtimeOn"
+              @change="toggleRealtime"
+            />
             <span>即時更新</span>
           </label>
           <button :disabled="loadingAlerts" @click="refreshAlerts">
             {{ loadingAlerts ? "刷新中..." : "手動刷新" }}
           </button>
           <button :disabled="loadingAlerts" @click="updateAleartList">
-              {{ loadingAlerts ? "取得資料中..." : "重新取得" }}
+            {{ loadingAlerts ? "取得資料中..." : "重新取得" }}
           </button>
         </div>
       </header>
 
       <div v-if="alertError" class="error">{{ alertError }}</div>
       <div v-if="loadingAlerts" class="hint">載入中...</div>
-      <div v-if="!loadingAlerts && alerts.length === 0 && !alertError" class="hint">
+      <div
+        v-if="!loadingAlerts && alerts.length === 0 && !alertError"
+        class="hint"
+      >
         尚無警告
       </div>
 
@@ -65,7 +72,12 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { io, Socket } from "socket.io-client";
-import { getAlertList, modifyAlertStatus, updateLog, BASE_URL } from "../utilities/api";
+import {
+  getAlertList,
+  modifyAlertStatus,
+  updateLogs,
+  BASE_URL,
+} from "../utilities/api";
 
 type AlertItem = {
   id: string;
@@ -126,7 +138,7 @@ const updateAleartList = async () => {
   alertError.value = "";
   try {
     const result = await updateLogs();
-    if (result ) {
+    if (result) {
       refreshAlerts();
     }
   } catch (e) {
@@ -145,15 +157,20 @@ const setupSocket = () => {
   socket.on("disconnect", () => console.log("socket disconnected"));
   socket.on("connect_error", (err) => console.error("socket error", err));
 
-  socket.on("newAlert", (payload: { success: boolean; result: AlertItem[] | AlertItem }) => {
-    if (!payload?.success || !payload.result) return;
-    const incoming = Array.isArray(payload.result) ? payload.result : [payload.result];
-    const map = new Map(alerts.value.map((a) => [a.id, a]));
-    incoming.forEach((a) => map.set(a.id, a));
-    alerts.value = Array.from(map.values()).sort(
-      (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
-    );
-  });
+  socket.on(
+    "newAlert",
+    (payload: { success: boolean; result: AlertItem[] | AlertItem }) => {
+      if (!payload?.success || !payload.result) return;
+      const incoming = Array.isArray(payload.result)
+        ? payload.result
+        : [payload.result];
+      const map = new Map(alerts.value.map((a) => [a.id, a]));
+      incoming.forEach((a) => map.set(a.id, a));
+      alerts.value = Array.from(map.values()).sort(
+        (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+      );
+    }
+  );
 };
 
 const teardownSocket = () => {
@@ -183,7 +200,7 @@ const onToggleOk = async (alert: AlertItem) => {
 
 onMounted(async () => {
   await refreshAlerts(); // 初次載入
-  setupSocket();        // 預設開啟即時更新
+  setupSocket(); // 預設開啟即時更新
 });
 
 onBeforeUnmount(() => {
@@ -194,7 +211,8 @@ onBeforeUnmount(() => {
 <style scoped>
 .page {
   padding: 16px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    sans-serif;
 }
 .panel {
   border: 1px solid #e5e5e5;

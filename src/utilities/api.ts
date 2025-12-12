@@ -15,7 +15,7 @@ export async function initService(initJson: any): Promise<boolean> {
 export async function isConfigured(): Promise<boolean> {
   try {
     const response = await axios.get(`${BASE_URL}/is-configured`);
-    return response.data.isConfigured; // boolean
+    return response.data.data.isConfigured; // boolean
   } catch (error) {
     console.error("Failed to check configuration status:", error);
     return false;
@@ -35,8 +35,7 @@ export async function restoreService(): Promise<boolean> {
 export async function executeCode(studentID: string): Promise<any> {
   try {
     const response = await axios.post(`${BASE_URL}/judge-code`, { studentID });
-    console.log("Execute code response:", response.data);
-    return response.data;
+    return response.data.data;
   } catch (error) {
     console.error("Failed to execute code:", error);
     return null;
@@ -46,7 +45,7 @@ export async function executeCode(studentID: string): Promise<any> {
 export async function getSubmittedStudents(): Promise<string[]> {
   try {
     const response = await axios.get(`${BASE_URL}/get-submitted-students`);
-    return response.data.result; // string[]
+    return response.data.data.result; // string[]
   } catch (error) {
     console.error("Failed to get submitted students:", error);
     return [];
@@ -56,49 +55,37 @@ export async function getSubmittedStudents(): Promise<string[]> {
 export async function getAllStudentsScores(): Promise<any> {
   try {
     const response = await axios.post(`${BASE_URL}/all-student-scores`);
-    return response.data; // any
+    return response.data.data;
   } catch (error) {
     console.error("Failed to get all students scores:", error);
     return null;
   }
 }
 
-
 export async function updateLogs(): Promise<any[]> {
   try {
     const response = await axios.get(`${BASE_URL}/update-alert-list`);
-    return response.data.result; // any[]
-  }
-  catch (error) {
+    return response.data.data;
+  } catch (error) {
     console.error("Failed to get alert logs:", error);
     return [];
   }
 }
 
-
 export async function getAlertList(): Promise<any[]> {
   try {
     const response = await axios.get(`${BASE_URL}/get-alert-logs`);
-    return response.data.result; // any[]
+    return response.data.data.result;
   } catch (error) {
     console.error("Failed to get alert list:", error);
     return [];
   }
 }
 
-export async function getLogByStudent(studentID: string): Promise<any[]> {
-  try {
-    const response = await axios.get(`${BASE_URL}/get-student-log`, {
-      params: { studentID },
-    });
-    return response.data.result; // any[]
-  } catch (error) {
-    console.error("Failed to get logs by student:", error);
-    return [];
-  }
-}
-
-export async function modifyAlertStatus(alertID: string, isOK: boolean): Promise<boolean> {
+export async function modifyAlertStatus(
+  alertID: string,
+  isOK: boolean
+): Promise<boolean> {
   try {
     const response = await axios.post(`${BASE_URL}/set-alert-ok-status`, {
       id: alertID,
@@ -114,7 +101,7 @@ export async function modifyAlertStatus(alertID: string, isOK: boolean): Promise
 export async function getAllLogs(): Promise<any[]> {
   try {
     const response = await axios.get(`${BASE_URL}/get-all-logs`);
-    return response.data.result; // any[]
+    return response.data.data.result; // any[]
   } catch (error) {
     console.error("Failed to get all logs:", error);
     return [];

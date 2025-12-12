@@ -1,4 +1,4 @@
-import { createMemoryHistory, createRouter } from "vue-router";
+import { createWebHashHistory, createRouter } from "vue-router";
 import Home from "../views/Home.vue";
 import ExecuteCode from "../views/ExecuteCode.vue";
 import ScoreBoard from "../views/ScorePage.vue";
@@ -35,10 +35,10 @@ const routes = [
     path: "/logviewer",
     name: "LogViewer",
     component: LogViewer,
-  }
+  },
 ];
 
 export const router = createRouter({
-  history: createMemoryHistory(),
+  history: createWebHashHistory(),
   routes,
 });
