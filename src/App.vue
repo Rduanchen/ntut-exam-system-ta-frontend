@@ -9,9 +9,9 @@
       </div>
       <nav class="nav">
         <router-link to="/" class="link" active-class="active" exact>主頁</router-link>
-        <router-link to="/execute" class="link" active-class="active">執行</router-link>
-        <router-link to="/scoreboard" class="link" active-class="active">成績單</router-link>
         <router-link to="/scoretable" class="link" active-class="active">成績表</router-link>
+        <router-link to="/scoreboard" class="link" active-class="active">答題總覽</router-link>
+        <router-link to="/execute" class="link" active-class="active">執行</router-link>
         <router-link to="/anticheat" class="link" active-class="active">防作弊</router-link>
         <router-link to="/logviewer" class="link" active-class="active">學生日誌檢視器</router-link>
       </nav>
@@ -97,7 +97,7 @@
 
 .content {
   padding: 20px;
-  max-width: 1200px;
+  max-width: 90%;
   margin: 0 auto;
 }
 </style>
