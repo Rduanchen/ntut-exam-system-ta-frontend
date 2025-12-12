@@ -22,12 +22,12 @@ export async function isConfigured(): Promise<boolean> {
   }
 }
 
-export async function restoreService(): Promise<boolean> {
+export async function resetDatabaseService(): Promise<boolean> {
   try {
-    const response = await axios.get(`${BASE_URL}/restore`);
+    const response = await axios.get(`${BASE_URL}/reset-database`);
     return response.status === 200;
   } catch (error) {
-    console.error("Failed to restore service:", error);
+    console.error("Failed to reset service:", error);
     return false;
   }
 }
