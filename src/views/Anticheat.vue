@@ -65,7 +65,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { io, Socket } from "socket.io-client";
-import { getAlertList, modifyAlertStatus, updateLogs } from "../utilities/api";
+import { getAlertList, modifyAlertStatus, updateLog, BASE_URL } from "../utilities/api";
 
 type AlertItem = {
   id: string;
@@ -139,7 +139,8 @@ const updateAleartList = async () => {
 
 const setupSocket = () => {
   if (socket) return;
-  socket = io("/", { transports: ["websocket"] });
+  const url = BASE_URL.replace("/admin", "");
+  socket = io(url, { transports: ["websocket"] });
   socket.on("connect", () => console.log("socket connected"));
   socket.on("disconnect", () => console.log("socket disconnected"));
   socket.on("connect_error", (err) => console.error("socket error", err));
