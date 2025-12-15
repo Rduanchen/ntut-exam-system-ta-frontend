@@ -28,13 +28,24 @@
       <table ref="tableRef">
         <thead>
           <tr>
-            <th>學生編號</th>
-            <th>姓名</th>
-            <th v-for="col in puzzleColumns" :key="col">{{ col }}</th>
-            <th>題目數</th>
-            <th>通過測資數</th>
-            <th>公式輸出</th>
-            <th>最後提交時間</th>
+            <th rowspan="2">學生編號</th>
+            <th rowspan="2">姓名</th>
+            <th
+              v-for="pg in puzzleGroupColumns"
+              :key="pg.puzzleId"
+              :colspan="pg.groups.length"
+            >
+              題目 {{ pg.puzzleId }}
+            </th>
+            <th rowspan="2">題目數</th>
+            <th rowspan="2">通過測資數</th>
+            <th rowspan="2">公式輸出</th>
+            <th rowspan="2">最後提交時間</th>
+          </tr>
+          <tr>
+            <th v-for="col in flatGroupColumns" :key="col.key">
+              測資組 {{ col.groupId }}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -46,8 +57,8 @@
           >
             <td>{{ rec.student_ID }}</td>
             <td>{{ rec.student_name }}</td>
-            <td v-for="col in puzzleColumns" :key="col">
-              {{ formatBool(rec.puzzle_results[col]) }}
+            <td v-for="col in flatGroupColumns" :key="col.key">
+              {{ formatBool(groupResults[rec.id]?.[col.key]) }}
             </td>
             <td>{{ rec.puzzle_amount }}</td>
             <td>{{ rec.passed_puzzle_amount }}</td>
@@ -128,9 +139,43 @@ const selectRow = (id: number) => {
 
 /** 公式相關狀態 */
 const showFormulaModal = ref(false);
-const formulaCode = ref<string>(
-  `// 你可以使用變數 record（當前列資料）\n// 請務必 return 數值或字串\nreturn record.student_name + " / " + record.passed_puzzle_amount;`
-);
+const formulaCode = ref<string>(`const { puzzle_amount, puzzle_results } = record;
+
+let totalScore = 0;
+const scorePerPuzzle = 100 / puzzle_amount;
+
+for (let p = 1; p <= puzzle_amount; p++) {
+   const regex = new RegExp(\`^puzzle\${p}-(\\\\d+)-(\\\\d+)$\`);
+  const groups = {};
+
+  // 分組 groupID → caseID
+  for (const key in puzzle_results) {
+    const match = key.match(regex);
+    if (match) {
+      const groupID = match[1];
+      const caseID = match[2];
+      if (!groups[groupID]) groups[groupID] = {};
+      groups[groupID][caseID] = puzzle_results[key];
+    }
+  }
+
+  const groupIDs = Object.keys(groups);
+  if (groupIDs.length === 0) continue;
+
+  let passedGroups = 0;
+
+  groupIDs.forEach(groupID => {
+    const allPassed = Object.values(groups[groupID]).every(v => v === true);
+    if (allPassed) passedGroups++;
+  });
+
+  // 該題得分（依 group 比例）
+  const puzzleScore = (passedGroups / groupIDs.length) * scorePerPuzzle;
+  totalScore += puzzleScore;
+}
+
+const rounded = Math.round(totalScore);
+return \`\${rounded} / 100\`;`);
 const formulaError = ref("");
 const formulaFn = ref<(r: StudentRecord) => unknown>(() => "");
 
@@ -213,14 +258,79 @@ const filtered = computed(() => {
   );
 });
 
-/** 動態題目欄 */
-const puzzleColumns = computed(() => {
-  const set = new Set<string>();
+/**
+ * puzzle{puzzleId}-{groupId}-{caseId}
+ * 只顯示到 group 層級：puzzle{puzzleId}-{groupId}
+ */
+const parsePuzzleKey = (key: string) => {
+  const m = key.match(/^puzzle([^-]+)-([^-]+)-([^-]+)$/);
+  if (!m) return null;
+  const [, puzzleId, groupId, caseId] = m;
+  return { puzzleId, groupId, caseId };
+};
+const buildGroupKey = (puzzleId: string, groupId: string) =>
+  `puzzle${puzzleId}-${groupId}`;
+
+/** 動態題組欄結構 */
+const puzzleGroupColumns = computed(() => {
+  const map: Record<string, Set<string>> = {};
   filtered.value.forEach((r) => {
-    Object.keys(r.puzzle_results || {}).filter((c)=>!c.endsWith("status")).forEach((k) => set.add(k));
+    Object.keys(r.puzzle_results || {}).forEach((k) => {
+      const parsed = parsePuzzleKey(k);
+      if (!parsed) return;
+      map[parsed.puzzleId] = map[parsed.puzzleId] || new Set<string>();
+      map[parsed.puzzleId].add(parsed.groupId);
+    });
   });
-  return Array.from(set).sort((a, b) => a.localeCompare(b, "zh-Hant"));
+  return Object.entries(map)
+    .sort((a, b) =>
+      a[0].localeCompare(b[0], "zh-Hant", { numeric: true, sensitivity: "base" })
+    )
+    .map(([puzzleId, set]) => ({
+      puzzleId,
+      groups: Array.from(set).sort((a, b) =>
+        a.localeCompare(b, "zh-Hant", { numeric: true, sensitivity: "base" })
+      ),
+    }));
 });
+
+const flatGroupColumns = computed(
+  () =>
+    puzzleGroupColumns.value.flatMap((pg) =>
+      pg.groups.map((groupId) => ({
+        key: buildGroupKey(pg.puzzleId, groupId),
+        puzzleId: pg.puzzleId,
+        groupId,
+      }))
+    )
+);
+
+/** 每列的題組通過狀態：同 group 底下所有 case 都為 true 才算通過 */
+const groupResults = computed<Record<number, Record<string, boolean | undefined>>>(
+  () => {
+    const map: Record<number, Record<string, boolean | undefined>> = {};
+    filtered.value.forEach((rec) => {
+      const temp: Record<
+        string,
+        { allTrue: boolean; hasAny: boolean }
+      > = {};
+      Object.entries(rec.puzzle_results || {}).forEach(([k, v]) => {
+        const parsed = parsePuzzleKey(k);
+        if (!parsed) return;
+        const gKey = buildGroupKey(parsed.puzzleId, parsed.groupId);
+        if (!temp[gKey]) temp[gKey] = { allTrue: true, hasAny: false };
+        temp[gKey].hasAny = true;
+        if (!v) temp[gKey].allTrue = false;
+      });
+      const result: Record<string, boolean | undefined> = {};
+      Object.entries(temp).forEach(([gKey, status]) => {
+        result[gKey] = status.hasAny ? status.allTrue : undefined;
+      });
+      map[rec.id] = result;
+    });
+    return map;
+  }
+);
 
 /** 公式輸出：計算每列顯示值；若出錯輸出 "error" */
 const formulaOutputs = computed<Record<number, string>>(() => {
@@ -298,7 +408,12 @@ const copyTable = async () => {
     "題目數",
     "通過測資數",
   ];
-  const cols = [...baseCols, ...puzzleColumns.value];
+  const cols = [
+    ...baseCols,
+    ...flatGroupColumns.value.map(
+      (c) => `題目${c.puzzleId} 測資組 ${c.groupId}`
+    ),
+  ];
 
   const lines = filtered.value.map((r) => {
     const base = [
@@ -309,10 +424,10 @@ const copyTable = async () => {
       String(r.puzzle_amount),
       String(r.passed_puzzle_amount),
     ];
-    const puzzles = puzzleColumns.value.map((c) =>
-      formatBool(r.puzzle_results?.[c])
+    const groups = flatGroupColumns.value.map((c) =>
+      formatBool(groupResults.value[r.id]?.[c.key])
     );
-    return [...base, ...puzzles].join("\t");
+    return [...base, ...groups].join("\t");
   });
 
   const tsv = [cols.join("\t"), ...lines].join("\n");

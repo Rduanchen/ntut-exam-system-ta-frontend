@@ -1,66 +1,66 @@
 <template>
   <div class="page">
-    <h2>程式執行與提交查詢</h2>
-
-    <!-- 已提交學生列表 -->
-    <section class="card">
-      <div class="card-header">
-        <h3>已提交學生</h3>
-        <button :disabled="loadingSubmitted" @click="fetchSubmitted">
-          {{ loadingSubmitted ? "刷新中..." : "重新整理" }}
-        </button>
-      </div>
-      <div v-if="!loadingSubmitted && submitted.length === 0" class="hint">
-        目前沒有資料
-      </div>
-      <ul v-else class="list">
-        <li v-for="id in submitted" :key="id">{{ id }}</li>
-      </ul>
-    </section>
-
-    <!-- 執行程式 -->
-    <section class="card">
-      <h3>輸入學號執行程式</h3>
-      <div class="input-row">
-        <input
-          v-model="studentID"
-          placeholder="學號"
-          @keyup.enter="handleExecute"
-        />
-        <button :disabled="execLoading" @click="handleExecute">
-          {{ execLoading ? "執行中..." : "執行" }}
-        </button>
-      </div>
-      <div v-if="error" class="error">{{ error }}</div>
-
-      <!-- 執行結果 -->
-      <div v-if="execResult" class="result">
-        <h4>執行結果</h4>
-        <div
-          v-for="prob in execResult.result"
-          :key="prob.problemID"
-          class="problem-block"
-        >
-          <strong>題目 {{ prob.problemID }}</strong>
-          <table class="result-table">
-            <thead>
-              <tr>
-                <th>測資ID</th>
-                <th>成功</th>
-                <th>訊息</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="r in prob.results" :key="r.testCaseID">
-                <td>{{ r.testCaseID }}</td>
-                <td>{{ r.success ? "✅" : "❌" }}</td>
-                <td class="msg">{{ r.messeage }}</td>
-              </tr>
-            </tbody>
-          </table>
+    <div class="layout">
+      <!-- 左側：已提交學生 -->
+      <section class="card sidebar">
+        <div class="card-header">
+          <h3>已提交學生</h3>
+          <button :disabled="loadingSubmitted" @click="fetchSubmitted">
+            {{ loadingSubmitted ? "刷新中..." : "重新整理" }}
+          </button>
         </div>
-      </div>
-    </section>
+        <div v-if="!loadingSubmitted && submitted.length === 0" class="hint">
+          目前沒有資料
+        </div>
+        <ul v-else class="list">
+          <li v-for="id in submitted" :key="id">{{ id }}</li>
+        </ul>
+      </section>
+
+      <!-- 右側：執行程式 -->
+      <section class="card main">
+        <h3>輸入學號執行程式</h3>
+        <div class="input-row">
+          <input
+            v-model="studentID"
+            placeholder="學號"
+            @keyup.enter="handleExecute"
+          />
+          <button :disabled="execLoading" @click="handleExecute">
+            {{ execLoading ? "執行中..." : "執行" }}
+          </button>
+        </div>
+        <div v-if="error" class="error">{{ error }}</div>
+
+        <!-- 執行結果 -->
+        <div v-if="execResult" class="result">
+          <h4>執行結果</h4>
+          <div
+            v-for="prob in execResult.result"
+            :key="prob.problemID"
+            class="problem-block"
+          >
+            <strong>題目 {{ prob.problemID }}</strong>
+            <table class="result-table">
+              <thead>
+                <tr>
+                  <th>測資ID</th>
+                  <th>成功</th>
+                  <th>訊息</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="r in prob.results" :key="r.testCaseID">
+                  <td>{{ r.testCaseID }}</td>
+                  <td>{{ r.success ? "✅" : "❌" }}</td>
+                  <td class="msg">{{ r.messeage }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -125,63 +125,104 @@ onMounted(() => {
 <style scoped>
 .page {
   padding: 24px;
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
 }
+
+.layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
 .card {
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 16px;
-  margin-bottom: 20px;
   background: #fff;
 }
+
+/* 左 30% / 右 70% */
+.sidebar {
+  flex: 0 0 30%;
+}
+
+.main {
+  flex: 1 1 70%;
+}
+
 .card-header {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .input-row {
   display: flex;
   gap: 8px;
   margin: 12px 0;
 }
+
 .input-row input {
   flex: 1;
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 6px;
 }
+
 .input-row button {
   padding: 8px 14px;
 }
+
 .list {
   margin: 8px 0 0;
   padding-left: 18px;
 }
+
+.hint {
+  color: #666;
+}
+
 .error {
   color: #d93025;
   margin-bottom: 8px;
 }
+
 .result {
   margin-top: 12px;
 }
+
 .problem-block {
   margin-top: 10px;
 }
+
 .result-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 6px;
 }
+
 .result-table th,
 .result-table td {
   border-bottom: 1px solid #eee;
   text-align: left;
   padding: 6px 4px;
 }
+
 .msg {
   white-space: pre-wrap;
+}
+
+/* 可選：小螢幕堆疊 */
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+  .sidebar,
+  .main {
+    flex: 1 1 auto;
+  }
 }
 </style>
