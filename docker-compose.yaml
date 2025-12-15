@@ -1,0 +1,20 @@
+services:
+  # 你原本的 postgres / backend 保持不動（這裡略）
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: my-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - frontend_node_modules:/app/node_modules
+    environment:
+      NODE_ENV: development
+
+volumes:
+  # 你原本的 volumes 保持不動（這裡略）
+  frontend_node_modules:
