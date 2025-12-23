@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const BASE_URL = "http://localhost:3001/admin";
+export const BASE_URL = "http://localhost:3002/admin";
 
 export async function initService(initJson: any): Promise<boolean> {
   try {
