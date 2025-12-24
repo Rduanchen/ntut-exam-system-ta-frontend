@@ -15,9 +15,6 @@
           <button :disabled="loadingAlerts" @click="refreshAlerts">
             {{ loadingAlerts ? "刷新中..." : "手動刷新" }}
           </button>
-          <button :disabled="loadingAlerts" @click="updateAleartList">
-            {{ loadingAlerts ? "取得資料中..." : "重新取得" }}
-          </button>
         </div>
       </header>
 
@@ -39,26 +36,28 @@
               <th>類型</th>
               <th>時間</th>
               <th>IP</th>
+              <th>Mac</th>
               <th>訊息</th>
-              <th>is_ok</th>
+              <th>狀態</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="a in alerts" :key="a.id">
               <td>{{ a.id }}</td>
-              <td>{{ a.studentID }}</td>
+              <td>{{ a.student_id }}</td>
               <td>{{ a.type }}</td>
               <td>{{ formatTime(a.time) }}</td>
-              <td>{{ a.ip }}</td>
+              <td>{{ a.ipAddress }}</td>
+              <td>{{ a.mac || "—" }}</td>
               <td class="pre">{{ a.messeage }}</td>
               <td>
                 <label class="switch">
                   <input
                     type="checkbox"
-                    :checked="a.is_ok"
+                    :checked="a.isOk"
                     @change="onToggleOk(a)"
                   />
-                  <span>{{ a.is_ok ? "OK" : "Not OK" }}</span>
+                  <span>{{ a.isOk ? "OK" : "Not OK" }}</span>
                 </label>
               </td>
             </tr>
@@ -72,22 +71,18 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { io, Socket } from "socket.io-client";
-import {
-  getAlertList,
-  modifyAlertStatus,
-  updateLogs,
-  BASE_URL,
-} from "../utilities/api";
+import { getAlertList, modifyAlertStatus, BASE_URL } from "../utilities/api";
 
+// 根據新的 JSON 格式定義介面
 type AlertItem = {
-  id: string;
+  id: number;
   time: string;
-  studentID: string;
-  type: "duplicate ip devices" | "Try to quit the app";
-  messageID: string;
-  ip: string;
-  messeage: string;
-  is_ok: boolean;
+  student_id: string; // 變更名稱
+  type: string;
+  ipAddress: string; // 變更名稱
+  mac?: string; // 新增欄位 (API 若未回傳此欄位，會顯示為 —)
+  messeage: string; // 根據 API 格式保留此拼寫
+  isOk: boolean; // 變更名稱
 };
 
 const alerts = ref<AlertItem[]>([]);
@@ -117,6 +112,7 @@ const refreshAlerts = async () => {
   loadingAlerts.value = true;
   alertError.value = "";
   try {
+    // 假設 getAlertList 回傳的資料已經符合 AlertItem[]
     const result = await getAlertList();
     if (Array.isArray(result)) {
       alerts.value = result.sort(
@@ -124,22 +120,6 @@ const refreshAlerts = async () => {
       );
     } else {
       throw new Error("回傳格式不正確");
-    }
-  } catch (e) {
-    console.error(e);
-    alertError.value = "載入失敗";
-  } finally {
-    loadingAlerts.value = false;
-  }
-};
-
-const updateAleartList = async () => {
-  loadingAlerts.value = true;
-  alertError.value = "";
-  try {
-    const result = await updateLogs();
-    if (result) {
-      refreshAlerts();
     }
   } catch (e) {
     console.error(e);
@@ -157,6 +137,7 @@ const setupSocket = () => {
   socket.on("disconnect", () => console.log("socket disconnected"));
   socket.on("connect_error", (err) => console.error("socket error", err));
 
+  // Socket 回傳的格式也改變了，這裡做相應處理
   socket.on(
     "newAlert",
     (payload: { success: boolean; result: AlertItem[] | AlertItem }) => {
@@ -164,8 +145,10 @@ const setupSocket = () => {
       const incoming = Array.isArray(payload.result)
         ? payload.result
         : [payload.result];
+
       const map = new Map(alerts.value.map((a) => [a.id, a]));
       incoming.forEach((a) => map.set(a.id, a));
+
       alerts.value = Array.from(map.values()).sort(
         (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
       );
@@ -189,18 +172,19 @@ const toggleRealtime = () => {
 };
 
 const onToggleOk = async (alert: AlertItem) => {
-  const target = !alert.is_ok;
-  const success = await modifyAlertStatus(alert.id, target);
+  const target = !alert.isOk;
+  // 注意：modifyAlertStatus 的實作可能需要確認是否接受新的 id 類型 (number)
+  const success = await modifyAlertStatus(String(alert.id), target);
   if (success) {
-    alert.is_ok = target;
+    alert.isOk = target;
   } else {
     alertError.value = "更新失敗";
   }
 };
 
 onMounted(async () => {
-  await refreshAlerts(); // 初次載入
-  setupSocket(); // 預設開啟即時更新
+  await refreshAlerts();
+  setupSocket();
 });
 
 onBeforeUnmount(() => {
