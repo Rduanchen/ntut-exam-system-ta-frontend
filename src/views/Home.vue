@@ -121,6 +121,13 @@ const submitInit = async () => {
 
 const runResetDatabase = async () => {
   loadingResetDatabase.value = true;
+  const result = confirm(
+    "Are you sure you want to reset the database? This action cannot be undone."
+  );
+  if (!result) {
+    loadingResetDatabase.value = false;
+    return;
+  }
   message.value = "";
   try {
     const ok = await resetDatabaseService();
