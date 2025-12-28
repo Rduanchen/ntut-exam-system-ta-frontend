@@ -107,3 +107,50 @@ export async function getAllLogs(): Promise<any[]> {
     return [];
   }
 }
+
+
+export async function getConfigAvailability(): Promise<boolean | null> {
+  try {
+    const response = await axios.get(`${BASE_URL}/get-config-availability`);
+    return response.data.data.available; // boolean
+  } catch (error) {
+    console.error("Failed to get config availability:", error);
+    return null;
+  }
+}
+
+export async function updateConfigAvailability(
+  available: boolean
+): Promise<boolean> {
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/toggle-config-availability`,
+      { available }
+    );
+    return response.data.success; // boolean
+  } catch (error) {
+    console.error("Failed to update config availability:", error);
+    return false;
+  }
+}
+
+export async function getStudentCodes(studentID: string): Promise<{ codeList: string[]; codeOBJ: Record<string, string> } | null> {
+  try {
+    const response = await axios.post(`${BASE_URL}/get-student-codes`, { studentID });
+    return response.data.data; // { codeList: string[]; codeOBJ: Record<string, string> }
+  } catch (error) {
+    console.error("Failed to get student codes:", error);
+    return null;
+  }
+}
+
+
+export async function getHostUserUrl(): Promise<string | null> {
+  try {
+    const response = await axios.get(`${BASE_URL}/get-host-user-url`);
+    return response.data.data.url; // string
+  } catch (error) {
+    console.error("Failed to get host user URL:", error);
+    return null;
+  }
+}

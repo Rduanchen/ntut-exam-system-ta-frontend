@@ -38,6 +38,24 @@
       </button>
     </section>
 
+    <section class="card">
+      <div class="card-header">
+        <h2>Service Availability</h2>
+        <span class="status-pill" :class="isAvailable ? 'ok' : 'not-ok'">
+          {{ isAvailable === null ? "Unknown" : isAvailable ? "Crawlable" : "Hidden" }}
+        </span>
+      </div>
+      <p class="description">Control whether the configuration is accessible by the crawler.</p>
+      
+      <button 
+        :disabled="loadingToggle || isAvailable === null" 
+        @click="toggleAvailability"
+        :class="{ 'btn-secondary': isAvailable }"
+      >
+        {{ loadingToggle ? "Updating..." : (isAvailable ? "Disable Crawling" : "Enable Crawling") }}
+      </button>
+    </section>
+
     <section class="log" v-if="message">
       <strong>Message:</strong> {{ message }}
     </section>
@@ -50,6 +68,8 @@ import {
   initService,
   isConfigured as apiIsConfigured,
   resetDatabaseService as resetDatabaseService,
+  getConfigAvailability,
+  updateConfigAvailability
 } from "../utilities/api";
 
 const isConfigured = ref<boolean | null>(null);
@@ -63,14 +83,24 @@ const loadingCheck = ref(false);
 const loadingInit = ref(false);
 const loadingResetDatabase = ref(false);
 
+const isAvailable = ref<boolean | null>(null);
+const loadingToggle = ref(false);
+
+
 const checkStatus = async () => {
   loadingCheck.value = true;
   message.value = "";
   try {
-    const result = await apiIsConfigured();
-    console.log("Configuration status:", result);
-    isConfigured.value = result;
-    message.value = `Status: ${result ? "configured" : "not configured"}`;
+    // 並行執行兩個狀態檢查
+    const [configResult, availabilityResult] = await Promise.all([
+      apiIsConfigured(),
+      getConfigAvailability()
+    ]);
+    
+    isConfigured.value = configResult;
+    isAvailable.value = availabilityResult;
+    
+    message.value = "Status updated";
   } catch (err) {
     console.error(err);
     message.value = "Failed to check status";
@@ -143,6 +173,32 @@ const runResetDatabase = async () => {
   }
 };
 
+
+const toggleAvailability = async () => {
+  if (isAvailable.value === null) return;
+  
+  loadingToggle.value = true;
+  message.value = "";
+  
+  try {
+    const nextState = !isAvailable.value;
+    const success = await updateConfigAvailability(nextState);
+    
+    if (success) {
+      isAvailable.value = nextState;
+      message.value = `Availability updated to: ${nextState ? 'Crawlable' : 'Hidden'}`;
+    } else {
+      message.value = "Failed to update availability";
+    }
+  } catch (err) {
+    console.error(err);
+    message.value = "Error updating availability";
+  } finally {
+    loadingToggle.value = false;
+  }
+};
+
+
 // Optional: check status on load
 checkStatus();
 </script>
@@ -189,6 +245,7 @@ button {
   border-radius: 6px;
   transition: background 0.15s;
 }
+
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -217,5 +274,32 @@ button:disabled {
   border-radius: 6px;
   background: #eef2ff;
   color: #312e81;
+}
+
+/* 讓卡片標題可以跟狀態標籤並排 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.card-header h2 {
+  margin: 0;
+}
+
+.description {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+/* 增加一個次要按鈕的樣式，當狀態是 '開' 的時候可以顯示成紅色或灰色提示關閉 */
+.btn-secondary {
+  background: #4b5563; /* 灰色 */
+}
+
+.btn-secondary:hover {
+  background: #374151;
 }
 </style>

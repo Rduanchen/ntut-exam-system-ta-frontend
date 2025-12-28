@@ -5,12 +5,16 @@ import ScoreBoard from "../views/ScorePage.vue";
 import ScoreTable from "../views/ScoreTable.vue";
 import Anticheat from "../views/Anticheat.vue";
 import LogViewer from "../views/LogViewer.vue";
+import StudentCodeViewer from "../views/StudentCodeViewer.vue";
+import ExamGenerator from "../views/ExamGenerator.vue";
+
 const routes = [
   {
     path: "/",
     name: "Home",
     component: Home,
   },
+
   {
     path: "/execute",
     name: "ExecuteCode",
@@ -36,6 +40,16 @@ const routes = [
     name: "LogViewer",
     component: LogViewer,
   },
+  {
+    path: "/studentcodeviewer",
+    name: "StudentCodeViewer",
+    component: StudentCodeViewer,
+  },
+  {
+    path: "/examgenerator",
+    name: "ExamGenerator",
+    component: ExamGenerator,
+  }
 ];
 
 export const router = createRouter({

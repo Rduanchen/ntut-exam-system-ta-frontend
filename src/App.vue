@@ -14,6 +14,8 @@
         <router-link to="/execute" class="link" active-class="active">執行</router-link>
         <router-link to="/anticheat" class="link" active-class="active">防作弊</router-link>
         <router-link to="/logviewer" class="link" active-class="active">學生日誌檢視器</router-link>
+        <router-link to="/studentcodeviewer" class="link" active-class="active">學生程式碼檢視器</router-link>
+        <router-link to="/examgenerator" class="link" active-class="active">考試產生器</router-link>
       </nav>
     </header>
 
