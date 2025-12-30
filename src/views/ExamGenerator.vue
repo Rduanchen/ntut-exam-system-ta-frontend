@@ -2,9 +2,7 @@
   <div class="page">
     <h1>考試設定 JSON 產生器</h1>
     <div class="grid two-cols">
-      <!-- 左側：設定區 -->
       <div class="grid stack">
-        <!-- 基本資訊 -->
         <details class="card" open>
           <summary>
             <div class="summary-row">
@@ -22,10 +20,6 @@
                 <label>description</label>
                 <textarea v-model="state.description" placeholder="the test will be start at 18:00 and end at 20:00"></textarea>
               </div>
-              <!-- <div>
-                <label>publicKey</label>
-                <textarea v-model="state.publicKey" placeholder="粘貼 RSA 公鑰"></textarea>
-              </div> -->
               <div class="row remote-row">
                 <div class="grow">
                   <label>remoteHost</label>
@@ -39,25 +33,10 @@
                 <label>maxExecutionTime (ms)</label>
                 <input v-model.number="state.maxExecutionTime" type="number" min="0" placeholder="預設毫秒限制" />
               </div>
-              <!-- <div class="row wrap">
-                <div>
-                  <label>testTime.startTime (ISO)</label>
-                  <input v-model="localStart" type="datetime-local" />
-                </div>
-                <div>
-                  <label>testTime.endTime (ISO)</label>
-                  <input v-model="localEnd" type="datetime-local" />
-                </div>
-                <label class="inline-checkbox">
-                  <input v-model="state.testTime.forceQuit" type="checkbox" />
-                  <span>forceQuit</span>
-                </label>
-              </div> -->
             </div>
           </div>
         </details>
 
-        <!-- accessableUsers -->
         <details class="card" open>
           <summary>
             <div class="summary-row">
@@ -104,7 +83,6 @@
           </div>
         </details>
 
-        <!-- puzzles -->
         <details class="card" open>
           <summary>
             <div class="summary-row">
@@ -139,7 +117,7 @@
                 </div>
                 <div>
                   <label>language</label>
-                  <input v-model="puzzle.language" placeholder="Python / C / C++ ..." />
+                  <input disabled="true" v-model="puzzle.language" placeholder="Python / C / C++ ..." />
                 </div>
               </div>
 
@@ -186,7 +164,7 @@
                         <label>input</label>
                         <textarea v-model="tc.input" placeholder="輸入"></textarea>
                         <label>output</label>
-                        <input v-model="tc.output" placeholder="輸出" />
+                        <textarea v-model="tc.output" placeholder="輸出"></textarea>
                       </div>
                     </div>
 
@@ -210,7 +188,7 @@
                         <label>input</label>
                         <textarea v-model="tc.input" placeholder="輸入"></textarea>
                         <label>output</label>
-                        <input v-model="tc.output" placeholder="輸出" />
+                        <textarea v-model="tc.output" placeholder="輸出"></textarea>
                       </div>
                     </div>
                   </div>
@@ -221,9 +199,8 @@
         </details>
       </div>
 
-      <!-- 右側：預覽與下載 -->
       <div class="grid sticky">
-        <div class="card">
+        <div class="card preview-container">
           <div class="section-header">
             <h2>Preview JSON</h2>
             <div class="inline gap8">
@@ -268,16 +245,6 @@ const previewMode = ref<'config' | 'to-server'>('config');
 const refreshTick = ref(0);
 const loadingHost = ref(false);
 
-// datetime-local helpers
-const localStart = computed({
-  get: () => toLocal(state.testTime.startTime),
-  set: (v: string) => (state.testTime.startTime = toISO(v)),
-});
-const localEnd = computed({
-  get: () => toLocal(state.testTime.endTime),
-  set: (v: string) => (state.testTime.endTime = toISO(v)),
-});
-
 function toISO(localValue: string) {
   if (!localValue) return '';
   const dt = new Date(localValue);
@@ -291,7 +258,6 @@ function toLocal(iso: string) {
   return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
 }
 
-// Build config & to-server
 const configJSON = computed(() => ({
   testTitle: state.testTitle || '',
   description: state.description || '',
@@ -340,7 +306,6 @@ const previewText = computed(() =>
   JSON.stringify(previewMode.value === 'config' ? configJSON.value : toServerJSON.value, null, 2)
 );
 
-// Users
 function addUser() {
   state.accessableUsers.push({ id: '', name: '' });
 }
@@ -369,7 +334,6 @@ function importCSV(auto = false) {
 }
 watch(csvText, () => importCSV(true));
 
-// Puzzles & groups
 function addPuzzle() {
   state.puzzles.push({ name: '', language: 'Python', testCases: [] });
 }
@@ -395,7 +359,6 @@ function removeHiddenCase(pIdx: number, gIdx: number, tcIdx: number) {
   state.puzzles[pIdx].testCases[gIdx].hiddenTestCases.splice(tcIdx, 1);
 }
 
-// Download helpers
 function downloadJSON(obj: any, filename: string) {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -412,12 +375,10 @@ function downloadToServer() {
   downloadJSON(toServerJSON.value, 'exam-config-to-server.json');
 }
 
-// Force preview refresh (tick to retrigger computed consumers)
 function forceRefresh() {
   refreshTick.value++;
 }
 
-// Remote host fetch
 async function fillRemoteHost() {
   loadingHost.value = true;
   try {
@@ -444,12 +405,26 @@ async function fillRemoteHost() {
   padding: 20px;
   color: #111827;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 h1, h2, h3, h4 { margin: 0 0 10px; }
 h1 { margin-bottom: 16px; }
 .m0 { margin: 0; }
 .grid { display: grid; gap: 12px; }
-.two-cols { grid-template-columns: 2fr 1fr; align-items: start; }
+
+/* 主要佈局設定 
+  min-width: 0 是關鍵，防止 flex/grid 子元素被長內容撐開導致破版
+*/
+.two-cols {
+  grid-template-columns: 7fr 3fr; 
+  align-items: start;
+}
+.two-cols > * {
+  min-width: 0; 
+}
+
 .stack { align-content: start; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; box-shadow: 0 6px 20px rgba(17,24,39,0.05); }
 label { font-weight: 600; display: block; margin-bottom: 6px; }
@@ -476,7 +451,7 @@ button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 12px; 
 }
 .btn-secondary { background: #e5e7eb; color: #111827; }
 .btn-danger { background: #ef4444; color: #fff; }
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
 .summary-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .card-body { padding: 14px 16px; }
 .dash { margin: 12px 0; border: none; border-top: 1px dashed var(--border); }
@@ -485,7 +460,26 @@ details.card { padding: 0; }
 details > summary { list-style: none; cursor: pointer; padding: 14px 16px; border-radius: 10px; }
 details[open] > summary { border-bottom: 1px solid var(--border); }
 summary::-webkit-details-marker { display: none; }
-pre { background: #0b1021; color: #e5e7eb; padding: 12px; border-radius: 10px; overflow: auto; max-height: 420px; }
+
+/* PRE 標籤修正 
+  1. max-width: 100% 確保不超出父層
+  2. overflow-x: auto 開啟水平捲軸
+  3. white-space: pre 保持不換行，強制觸發捲軸
+*/
+pre { 
+  background: #0b1021; 
+  color: #e5e7eb; 
+  padding: 12px; 
+  border-radius: 10px; 
+  
+  max-height: 420px;
+  overflow-y: auto; 
+  
+  max-width: 100%;
+  overflow-x: auto; 
+  white-space: pre; 
+}
+
 .sticky { position: sticky; top: 20px; align-self: start; }
 .user-row { align-items: flex-end; }
 .remote-row { align-items: flex-end; }
@@ -496,4 +490,16 @@ pre { background: #0b1021; color: #e5e7eb; padding: 12px; border-radius: 10px; o
 .align-start { align-items: flex-start; }
 .input-plain { padding: 8px; border-radius: 6px; }
 .mt10 { margin-top: 10px; }
+
+/* 手機版響應式設計 (RWD)
+  當螢幕寬度小於 900px 時，將左右兩欄改為上下堆疊
+*/
+@media (max-width: 900px) {
+  .two-cols {
+    grid-template-columns: 1fr; /* 改為單欄 */
+  }
+  .sticky {
+    position: static; /* 手機版不需要 sticky */
+  }
+}
 </style>
