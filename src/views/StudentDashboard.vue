@@ -240,6 +240,7 @@ const getStatusCodeBg = (status: string) => {
       "
       class="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6"
     >
+   
       <!-- Student Header -->
       <div
         class="bg-gradient-to-r from-white to-blue-50 rounded-xl p-6 shadow-sm border border-gray-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6"

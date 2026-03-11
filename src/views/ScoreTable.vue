@@ -122,8 +122,8 @@
             </th>
             <th rowspan="2" class="px-3 py-3">提交時間</th>
           </tr>
-          <tr>
-            <!-- Subtask headers below each puzzle -->
+          <!-- <tr>
+          
             <template v-for="pid in puzzleIds" :key="`sub-${pid}`">
               <th
                 v-for="sIdx in subtaskCounts[pid] || 0"
@@ -132,7 +132,7 @@
               >
                 Subtask {{ sIdx }}
               </th>
-              <!-- If no subtasks found for a puzzle (edge case), show placeholder -->
+          
               <th
                 v-if="(subtaskCounts[pid] || 0) === 0"
                 class="px-2 py-1 border-l border-gray-200"
@@ -140,7 +140,7 @@
                 -
               </th>
             </template>
-          </tr>
+          </tr> -->
         </thead>
         <tbody>
           <tr

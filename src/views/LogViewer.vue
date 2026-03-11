@@ -317,18 +317,18 @@ onMounted(() => {
                 #{{ log.id }}
               </td>
               <td class="px-6 py-4 text-gray-500 whitespace-nowrap text-xs">
-                {{ formatTime(log.time) }}
+                {{ formatTime(log.timestamp) }}
               </td>
               <td class="px-6 py-4 font-medium text-gray-900">
-                {{ log.student_id }}
+                {{ log.student_ID }}
               </td>
               <td class="px-6 py-4">
                 <div class="flex flex-col text-xs">
                   <span class="font-mono text-gray-600">{{
-                    log.ipAddress
+                    log.ip_address
                   }}</span>
                   <span class="font-mono text-gray-400" v-if="log.mac">{{
-                    log.mac
+                    log.mac_address
                   }}</span>
                 </div>
               </td>
@@ -336,13 +336,13 @@ onMounted(() => {
                 <span
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200 whitespace-nowrap"
                 >
-                  {{ log.type }}
+                  {{ log.action_type }}
                 </span>
               </td>
               <td
                 class="px-6 py-4 text-gray-600 font-mono text-xs break-all leading-relaxed"
               >
-                {{ log.messeage || log.message }}
+                {{ log.details || log.details }}
               </td>
             </tr>
           </tbody>
