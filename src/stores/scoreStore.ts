@@ -82,7 +82,7 @@ export const useScoreStore = defineStore("score", {
         console.log("Scoreboard socket connected");
       });
 
-      this.socket.on("scoreUpdate", (payload: any) => {
+      this.socket.on("score-update", (payload: any) => {
         // Handling broadcast updates.
         // Assuming payload might be full list or partial.
         // If full list:

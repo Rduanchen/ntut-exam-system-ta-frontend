@@ -111,7 +111,7 @@ export const useAnticheatStore = defineStore("anticheat", {
       );
 
       this.socket.on(
-        "newAlert",
+        "new-alert",
         (payload: {
           success: boolean;
           result: AnticheatLog[] | AnticheatLog;
