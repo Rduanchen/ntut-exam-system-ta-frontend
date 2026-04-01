@@ -23,6 +23,20 @@ const puzzleSchema = z.object({
   timeLimit: z.number().optional(),
   memoryLimit: z.number().optional(),
   subtasks: z.array(subtaskSchema),
+  // Special rules are optional and may be absent in older configs.
+  // We keep params flexible to allow future solvers without reshaping config.
+  specialRules: z
+    .array(
+      z.object({
+        id: z.string(),
+        type: z.enum(["regex", "includes", "composite"]),
+        constraint: z.enum(["MUST_HAVE", "MUST_NOT_HAVE"]),
+        message: z.string(),
+        severity: z.enum(["info", "warn"]).optional(),
+        params: z.unknown(),
+      }),
+    )
+    .optional(),
 });
 
 const accessUserSchema = z.object({
@@ -38,6 +52,18 @@ export const examConfigSchema = z.object({
     memoryLimit: z.number(),
   }),
   accessableUsers: z.array(accessUserSchema),
+  globalSpecialRules: z
+    .array(
+      z.object({
+        id: z.string(),
+        type: z.enum(["regex", "includes", "composite"]),
+        constraint: z.enum(["MUST_HAVE", "MUST_NOT_HAVE"]),
+        message: z.string(),
+        severity: z.enum(["info", "warn"]).optional(),
+        params: z.unknown(),
+      }),
+    )
+    .optional(),
   puzzles: z.array(puzzleSchema),
 });
 
