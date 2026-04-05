@@ -68,7 +68,7 @@ export const examConfigSchema = z.object({
     timeLimit: z.number(),
     memoryLimit: z.number(),
   }),
-  accessableUsers: z.array(accessUserSchema),
+  accessibleUsers: z.array(accessUserSchema),
   puzzles: z.array(puzzleSchema),
 });
 

@@ -7,7 +7,7 @@ describe("examConfigSchema (TA frontend)", () => {
             testTitle: "T",
             description: "D",
             judgerSettings: { timeLimit: 1, memoryLimit: 1 },
-            accessableUsers: [{ id: "A123", name: "Alice" }],
+            accessibleUsers: [{ id: "A123", name: "Alice" }],
             puzzles: [
                 {
                     title: "P1",
@@ -33,7 +33,7 @@ describe("examConfigSchema (TA frontend)", () => {
             testTitle: "T",
             description: "D",
             judgerSettings: { timeLimit: 1, memoryLimit: 1 },
-            accessableUsers: [{ id: "A123", name: "Alice" }],
+            accessibleUsers: [{ id: "A123", name: "Alice" }],
             globalSpecialRules: [
                 {
                     id: "g1",
