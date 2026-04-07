@@ -3,9 +3,12 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useStudentDashboardStore } from "../stores/studentDashboardStore";
 import { useUserStore } from "../stores/userStore";
 import CodeViewer from "../components/CodeViewer.vue";
+import SpecialRulesStatusPanel from "../components/SpecialRulesStatusPanel.vue";
+import { useExamStore } from "../stores/examStore";
 
 const dashboardStore = useStudentDashboardStore();
 const userStore = useUserStore();
+const examStore = useExamStore();
 const searchID = ref("");
 const selectedTestCase = ref<any>(null);
 const deviceInfo = ref<{ ip: string; mac: string } | null>(null);
@@ -15,6 +18,7 @@ let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
   dashboardStore.fetchSubmittedStudents();
+  examStore.fetchConfig();
 });
 
 const refreshStudentData = async () => {
@@ -315,14 +319,53 @@ const getStatusCodeBg = (status: string) => {
         <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <button
         @click="handleJudge"
-        :disabled="dashboardStore.isLoading"
+        :disabled="dashboardStore.isJudging"
         class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
           >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          v-if="!dashboardStore.isJudging"
+          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
-        Re-Judge
+        <svg
+          v-else
+          class="animate-spin h-4 w-4 text-white"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+          ></circle>
+          <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+        {{ dashboardStore.isJudging ? 'Re-judging…' : 'Re-Judge' }}
           </button>
+          <div
+          v-if="dashboardStore.judgeError"
+          class="sm:self-center text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-md"
+          role="alert"
+          >
+          {{ dashboardStore.judgeError }}
+          </div>
           <button
         @click="handleDeleteUserCrypto"
         :disabled="dashboardStore.isLoading"
@@ -356,7 +399,7 @@ const getStatusCodeBg = (status: string) => {
               </div>
 
               <div
-                v-for="(subtasks, pid) in dashboardStore.currentStudentScore
+                v-for="(puzzleResult, pid) in dashboardStore.currentStudentScore
                   ?.puzzle_results"
                 :key="pid"
                 class="border border-gray-200 rounded-lg overflow-hidden"
@@ -367,9 +410,17 @@ const getStatusCodeBg = (status: string) => {
                   <span>Problem {{ Number(pid) + 1 }}</span>
                 </div>
 
+                <div class="px-4 py-3">
+                  <SpecialRulesStatusPanel
+                    :exam-config="examStore.config"
+                    :puzzle-index="Number(pid)"
+                    :special-rule-results="puzzleResult.specialRuleResults"
+                  />
+                </div>
+
                 <div class="divide-y divide-gray-100">
                   <div
-                    v-for="(sub, sIdx) in subtasks"
+                    v-for="(sub, sIdx) in puzzleResult.subtasks"
                     :key="sIdx"
                     class="p-4 hover:bg-gray-50/50 transition-colors"
                   >

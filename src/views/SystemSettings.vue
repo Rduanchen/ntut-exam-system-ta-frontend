@@ -171,6 +171,108 @@
           </div>
         </div>
 
+        <!-- Special Rules (Global) -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h3
+              class="font-medium text-gray-700 uppercase text-xs tracking-wider"
+            >
+              Special Rules — Global
+            </h3>
+            <button
+              type="button"
+              @click="addGlobalSpecialRule"
+              class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"
+            >
+              + Add Global Rule
+            </button>
+          </div>
+
+          <div
+            v-if="(localConfig.globalSpecialRules?.length ?? 0) === 0"
+            class="text-sm text-gray-500"
+          >
+            No global special rules configured.
+          </div>
+
+          <div class="space-y-3" v-else>
+            <div
+              v-for="(r, rIdx) in localConfig.globalSpecialRules"
+              :key="r.id"
+              class="rounded-lg border border-gray-200 bg-white p-3"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div class="text-[11px] text-gray-500 font-mono break-all">
+                  {{ r.id }}
+                </div>
+                <button
+                  type="button"
+                  @click="removeGlobalSpecialRule(rIdx)"
+                  class="text-xs text-red-600 hover:text-red-800"
+                >
+                  Delete
+                </button>
+              </div>
+
+              <div class="mt-2 grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div class="md:col-span-2">
+                  <label class="block text-xs font-medium text-gray-500 uppercase"
+                    >Message</label
+                  >
+                  <input
+                    v-model="r.message"
+                    class="mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border"
+                    placeholder="Rule message shown to TAs"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 uppercase"
+                    >Type</label
+                  >
+                  <select
+                    :value="r.type"
+                    @change="(e) => onRuleTypeChange(r, (e.target as HTMLSelectElement).value as any)"
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+                  >
+                    <option value="regex">regex</option>
+                    <option value="use">use</option>
+                    <option value="composite">composite</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 uppercase"
+                    >Constraint</label
+                  >
+                  <select
+                    v-model="r.constraint"
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+                  >
+                    <option value="MUST_HAVE">MUST_HAVE</option>
+                    <option value="MUST_NOT_HAVE">MUST_NOT_HAVE</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 uppercase"
+                    >Severity</label
+                  >
+                  <select
+                    v-model="r.severity"
+                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+                  >
+                    <option :value="undefined">(none)</option>
+                    <option value="info">info</option>
+                    <option value="warn">warn</option>
+                  </select>
+                </div>
+              </div>
+
+              <SpecialRuleParamsEditor
+                :rule="r"
+              />
+            </div>
+          </div>
+        </div>
+
         <!-- Users Section -->
         <details
           class="bg-white border rounded-lg mb-4"
@@ -180,7 +282,7 @@
             class="px-4 py-3 cursor-pointer bg-gray-50 font-medium text-gray-700 focus:outline-none flex justify-between items-center"
           >
             <span
-              >Accessible Users ({{ localConfig.accessableUsers.length }})</span
+              >Accessible Users ({{ localConfig.accessibleUsers.length }})</span
             >
             <span class="text-xs text-gray-500" v-if="examStore.isExamStarted"
               >Locked</span
@@ -206,13 +308,13 @@
               class="max-h-60 overflow-y-auto mb-4 border rounded p-2 bg-gray-50"
             >
               <div
-                v-if="localConfig.accessableUsers.length === 0"
+                v-if="localConfig.accessibleUsers.length === 0"
                 class="text-gray-400 text-center py-4 text-sm"
               >
                 No users added
               </div>
               <div
-                v-for="(user, idx) in localConfig.accessableUsers"
+                v-for="(user, idx) in localConfig.accessibleUsers"
                 :key="idx"
                 class="flex gap-2 mb-2 items-center"
               >
@@ -355,6 +457,106 @@
                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                   placeholder="Default"
                 />
+              </div>
+            </div>
+
+            <!-- Special Rules (Per puzzle) -->
+            <div class="px-4 py-3 border-b bg-white">
+              <div class="flex items-center justify-between">
+                <div class="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                  Special Rules — Puzzle #{{ pIdx + 1 }}
+                </div>
+                <button
+                  type="button"
+                  @click="addPuzzleSpecialRule(pIdx)"
+                  class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"
+                >
+                  + Add Rule
+                </button>
+              </div>
+
+              <div
+                v-if="(puzzle.specialRules?.length ?? 0) === 0"
+                class="text-sm text-gray-500 mt-2"
+              >
+                No per-puzzle special rules configured.
+              </div>
+
+              <div class="space-y-3 mt-3" v-else>
+                <div
+                  v-for="(r, rIdx) in puzzle.specialRules"
+                  :key="r.id"
+                  class="rounded-lg border border-gray-200 bg-white p-3"
+                >
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="text-[11px] text-gray-500 font-mono break-all">
+                      {{ r.id }}
+                    </div>
+                    <button
+                      type="button"
+                      @click="removePuzzleSpecialRule(pIdx, rIdx)"
+                      class="text-xs text-red-600 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
+
+                  <div class="mt-2 grid grid-cols-1 md:grid-cols-5 gap-3">
+                    <div class="md:col-span-2">
+                      <label class="block text-xs font-medium text-gray-500 uppercase"
+                        >Message</label
+                      >
+                      <input
+                        v-model="r.message"
+                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border"
+                        placeholder="Rule message shown to TAs"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-500 uppercase"
+                        >Type</label
+                      >
+                      <select
+                        :value="r.type"
+                        @change="(e) => onRuleTypeChange(r, (e.target as HTMLSelectElement).value as any)"
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+                      >
+                        <option value="regex">regex</option>
+                        <option value="use">use</option>
+                        <option value="composite">composite</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-500 uppercase"
+                        >Constraint</label
+                      >
+                      <select
+                        v-model="r.constraint"
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+                      >
+                        <option value="MUST_HAVE">MUST_HAVE</option>
+                        <option value="MUST_NOT_HAVE">MUST_NOT_HAVE</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-500 uppercase"
+                        >Severity</label
+                      >
+                      <select
+                        v-model="r.severity"
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+                      >
+                        <option :value="undefined">(none)</option>
+                        <option value="info">info</option>
+                        <option value="warn">warn</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <SpecialRuleParamsEditor
+                    :rule="r"
+                  />
+                </div>
               </div>
             </div>
 
@@ -577,7 +779,7 @@
     <!-- Reset Confirmation Modal -->
     <div
       v-if="showResetModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      class="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm"
     >
       <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
         <h3 class="text-lg font-bold text-gray-900 mb-2">Reset System?</h3>
@@ -605,7 +807,7 @@
     <!-- Update Confirm Modal -->
     <div
       v-if="showUpdateConfirmModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      class="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-sm"
     >
       <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
         <h3 class="text-lg font-bold text-gray-900 mb-2">Confirm Update?</h3>
@@ -639,10 +841,11 @@ import {
   type ExamConfig,
   examConfigSchema,
 } from "../stores/examStore";
+import { createDefaultSpecialRule } from "../specialRules/defaults";
+import type { SpecialRule } from "../specialRules/types";
+import SpecialRuleParamsEditor from "../components/SpecialRuleParamsEditor.vue";
 import { useMessageStore } from "../stores/messegeStore";
 import { ZodError } from "zod";
-import { io } from "socket.io-client";
-import { BASE_URL } from "../utilities/api";
 
 const LANGUAGE_OPTIONS = [
   { label: "Python", value: "Python" },
@@ -687,6 +890,8 @@ const csvImportText = ref("");
 
 const showResetModal = ref(false);
 const showUpdateConfirmModal = ref(false);
+
+// Special rule editing helpers
 
 const normalizedStoreConfig = computed<ExamConfig | null>(() => {
   if (!examStore.config) return null;
@@ -737,13 +942,14 @@ function createNewConfig() {
     testTitle: "New Exam",
     description: "",
     judgerSettings: { timeLimit: 1000, memoryLimit: 128 },
-    accessableUsers: [],
+    accessibleUsers: [],
     puzzles: [],
   };
 }
 
 async function handleFileUpload(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0];
+  const inputEl = event.target as HTMLInputElement;
+  const file = inputEl.files?.[0];
   if (!file) return;
 
   const reader = new FileReader();
@@ -775,6 +981,11 @@ async function handleFileUpload(event: Event) {
     }
   };
   reader.readAsText(file);
+
+  // Important UX fix: allow importing the *same* file twice.
+  // Browsers don't fire `change` if the chosen file path doesn't change,
+  // so we clear the input after reading.
+  inputEl.value = '';
 }
 
 function downloadConfig() {
@@ -792,13 +1003,13 @@ function downloadConfig() {
 
 // User Management
 function addUser() {
-  localConfig.value?.accessableUsers.push({ id: "", name: "" });
+  localConfig.value?.accessibleUsers.push({ id: "", name: "" });
 }
 function removeUser(idx: number) {
-  localConfig.value?.accessableUsers.splice(idx, 1);
+  localConfig.value?.accessibleUsers.splice(idx, 1);
 }
 function clearUsers() {
-  if (localConfig.value) localConfig.value.accessableUsers = [];
+  if (localConfig.value) localConfig.value.accessibleUsers = [];
 }
 function importUsersFromCSV() {
   if (!csvImportText.value || !localConfig.value) return;
@@ -806,7 +1017,7 @@ function importUsersFromCSV() {
   lines.forEach((line) => {
     const [id, name] = line.split(",");
     if (id && name) {
-      localConfig.value!.accessableUsers.push({
+      localConfig.value!.accessibleUsers.push({
         id: id.trim(),
         name: name.trim(),
       });
@@ -829,21 +1040,93 @@ function removePuzzle(idx: number) {
   }
 }
 
+function ensureGlobalRulesArray() {
+  if (!localConfig.value) return;
+  if (!localConfig.value.globalSpecialRules) {
+    localConfig.value.globalSpecialRules = [];
+  }
+}
+
+function ensurePuzzleRulesArray(pIdx: number) {
+  if (!localConfig.value) return;
+  const puzzle = localConfig.value.puzzles[pIdx];
+  if (!puzzle) return;
+  if (!puzzle.specialRules) {
+    puzzle.specialRules = [];
+  }
+}
+
+function addGlobalSpecialRule() {
+  if (!localConfig.value) return;
+  ensureGlobalRulesArray();
+  localConfig.value.globalSpecialRules!.push(createDefaultSpecialRule());
+}
+
+function removeGlobalSpecialRule(ruleIndex: number) {
+  if (!localConfig.value?.globalSpecialRules) return;
+  localConfig.value.globalSpecialRules.splice(ruleIndex, 1);
+}
+
+function addPuzzleSpecialRule(pIdx: number) {
+  if (!localConfig.value) return;
+  ensurePuzzleRulesArray(pIdx);
+  const puzzle = localConfig.value.puzzles[pIdx];
+  if (!puzzle?.specialRules) return;
+  puzzle.specialRules.push(createDefaultSpecialRule());
+}
+
+function removePuzzleSpecialRule(pIdx: number, ruleIndex: number) {
+  if (!localConfig.value) return;
+  const puzzle = localConfig.value.puzzles[pIdx];
+  if (!puzzle?.specialRules) return;
+  puzzle.specialRules.splice(ruleIndex, 1);
+}
+
+function onRuleTypeChange(rule: SpecialRule, nextType: SpecialRule["type"]) {
+  // Normalize params when switching types so we never keep stale keys
+  // like { pattern, flags } after switching to composite.
+  rule.type = nextType;
+
+  if (nextType === "regex") {
+    rule.params = { pattern: "", flags: "" };
+    return;
+  }
+
+  if (nextType === "use") {
+    rule.params = { target: "" };
+    return;
+  }
+
+  // composite
+  rule.params = { op: "AND", rules: [] };
+}
+
 // Subtask Management
 function addSubtask(pIdx: number) {
-  localConfig.value?.puzzles[pIdx].subtasks.push({
+  if (!localConfig.value) return;
+  const puzzle = localConfig.value.puzzles[pIdx];
+  if (!puzzle) return;
+  puzzle.subtasks.push({
     title: "Group 1",
     visible: [],
     hidden: [],
   });
 }
 function removeSubtask(pIdx: number, sIdx: number) {
-  localConfig.value?.puzzles[pIdx].subtasks.splice(sIdx, 1);
+  if (!localConfig.value) return;
+  const puzzle = localConfig.value.puzzles[pIdx];
+  if (!puzzle) return;
+  puzzle.subtasks.splice(sIdx, 1);
 }
 
 // Test Case Management
 function addTestCase(pIdx: number, sIdx: number, type: "visible" | "hidden") {
-  localConfig.value?.puzzles[pIdx].subtasks[sIdx][type].push({
+  if (!localConfig.value) return;
+  const puzzle = localConfig.value.puzzles[pIdx];
+  if (!puzzle) return;
+  const subtask = puzzle.subtasks[sIdx];
+  if (!subtask) return;
+  subtask[type].push({
     input: "",
     output: "",
   });
@@ -854,7 +1137,12 @@ function removeTestCase(
   type: "visible" | "hidden",
   tIdx: number,
 ) {
-  localConfig.value?.puzzles[pIdx].subtasks[sIdx][type].splice(tIdx, 1);
+  if (!localConfig.value) return;
+  const puzzle = localConfig.value.puzzles[pIdx];
+  if (!puzzle) return;
+  const subtask = puzzle.subtasks[sIdx];
+  if (!subtask) return;
+  subtask[type].splice(tIdx, 1);
 }
 
 // Save Actions
@@ -873,7 +1161,7 @@ async function saveFullConfig() {
   } catch (err) {
     console.error(err);
     if (err instanceof ZodError) {
-      alert("Validation Failed: " + err.issues[0].message);
+  alert("Validation Failed: " + (err.issues[0]?.message ?? "Unknown error"));
     } else {
       alert("Failed to save configuration.");
     }
@@ -918,7 +1206,7 @@ async function doInitialize() {
   } catch (err: any) {
     console.error(err);
     if (err instanceof ZodError) {
-      alert("Validation Failed: " + err.issues[0].message);
+  alert("Validation Failed: " + (err.issues[0]?.message ?? "Unknown error"));
     } else {
       alert("Failed to initialize system: " + (err.message || "Unknown error"));
     }

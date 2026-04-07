@@ -18,8 +18,22 @@ export interface Subtask {
   visible: TestCaseRecord[];
 }
 
+export type SpecialRuleResultRecord = {
+  ruleId: string;
+  passed: boolean;
+  message: string;
+  reason?: string;
+  checkedAt: string; // ISO
+};
+
+export type PuzzleResultPayload = {
+  subtasks: Subtask[];
+  specialRuleResults?: SpecialRuleResultRecord[];
+};
+
 export interface ScoreBoardFormat {
-  [problemID: string]: Subtask[];
+  // Canonical shape (post-BC drop): always a wrapper object per puzzle.
+  [problemID: string]: PuzzleResultPayload;
 }
 
 export interface StudentRecord {

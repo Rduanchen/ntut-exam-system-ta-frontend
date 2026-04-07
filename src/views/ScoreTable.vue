@@ -103,7 +103,7 @@
             <!-- Dynamic Puzzle Columns -->
             <template v-for="pid in puzzleIds" :key="pid">
               <th
-                :colspan="subtaskCounts[pid] || 1"
+                :colspan="(subtaskCounts[pid] || 1) + 1"
                 class="px-3 py-2 text-center border-l border-b border-gray-300 bg-gray-200"
               >
                 題目 {{ Number(pid) + 1 }}
@@ -179,6 +179,19 @@
               >
                 -
               </td>
+
+              <!-- Special rules binary cell: 1 if all passed, else 0 -->
+              <td
+                class="px-2 py-3 text-center border-l border-gray-100 font-semibold"
+                :class="
+                  getSpecialRulesBinary(rec, pid) === 1
+                    ? 'text-green-700 bg-green-50'
+                    : 'text-red-700 bg-red-50'
+                "
+                title="Special rules: 1=all passed, 0=any failed"
+              >
+                {{ getSpecialRulesBinary(rec, pid) }}
+              </td>
             </template>
 
             <td class="px-3 py-3 text-center border-l border-gray-200">
@@ -203,7 +216,7 @@
     <!-- Detail Modal -->
     <div
       v-if="selectedRecord"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
       @click.self="selectedRecord = null"
     >
       <div
@@ -236,7 +249,7 @@
 
         <div class="p-6 overflow-y-auto">
           <div
-            v-for="(results, pid) in selectedRecord.puzzle_results"
+            v-for="(puzzleResult, pid) in selectedRecord.puzzle_results"
             :key="pid"
             class="mb-8"
           >
@@ -244,8 +257,16 @@
               題目 {{ Number(pid) + 1 }}
             </h4>
 
+            <div class="mb-4">
+              <SpecialRulesStatusPanel
+                :examConfig="examStore.config"
+                :puzzleIndex="Number(pid)"
+                :specialRuleResults="puzzleResult.specialRuleResults || []"
+              />
+            </div>
+
             <div
-              v-for="(subtask, sIdx) in results"
+              v-for="(subtask, sIdx) in puzzleResult.subtasks"
               :key="sIdx"
               class="mb-4 ml-4 p-4 border rounded-lg bg-gray-50"
             >
@@ -349,7 +370,7 @@
     <!-- Formula Modal -->
     <div
       v-if="showFormulaModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 "
       @click.self="closeFormulaModal"
     >
       <div
@@ -412,8 +433,12 @@ import {
   type StudentRecord,
   type StatusCode,
 } from "../stores/scoreStore";
+import { useExamStore } from "../stores/examStore";
+import { getSpecialRulesBinaryForPuzzle } from "../specialRules/scoreboard";
+import SpecialRulesStatusPanel from "../components/SpecialRulesStatusPanel.vue";
 
 const scoreStore = useScoreStore();
+const examStore = useExamStore();
 const keyword = ref("");
 const selectedRecord = ref<StudentRecord | null>(null);
 
@@ -432,8 +457,9 @@ const scorePerPuzzle = 100 / puzzle_amount;
 
 // Iterate through puzzles (keys might be "0", "1"...)
 Object.keys(puzzle_results).forEach(pid => {
-    const subtasks = puzzle_results[pid];
-    if (!subtasks || subtasks.length === 0) return;
+  const puzzleResult = puzzle_results[pid];
+  const subtasks = puzzleResult?.subtasks;
+  if (!subtasks || subtasks.length === 0) return;
 
     let passedSubtasks = 0;
     subtasks.forEach(sub => {
@@ -462,6 +488,7 @@ onMounted(async () => {
   if (saved) formulaCode.value = saved;
   tryApplyFormula(formulaCode.value, false);
 
+  await examStore.fetchConfig();
   await scoreStore.fetchScores();
   scoreStore.setupSocket();
 });
@@ -499,8 +526,8 @@ const subtaskCounts = computed(() => {
   puzzleIds.value.forEach((pid) => {
     let max = 0;
     filteredRecords.value.forEach((r) => {
-      const arr = r.puzzle_results[pid];
-      if (arr && arr.length > max) max = arr.length;
+  const subtasks = r.puzzle_results[pid]?.subtasks;
+  if (subtasks && subtasks.length > max) max = subtasks.length;
     });
     counts[pid] = max;
   });
@@ -513,7 +540,7 @@ const getAggregatedStatus = (
   pid: string,
   sIdx: number,
 ): string => {
-  const subtasks = rec.puzzle_results[pid];
+  const subtasks = rec.puzzle_results[pid]?.subtasks;
   if (!subtasks || !subtasks[sIdx]) return "";
 
   const sub = subtasks[sIdx];
@@ -532,6 +559,18 @@ const getAggregatedStatus = (
     if (c.status !== "AC") return c.status;
   }
   return "AC";
+};
+
+// Per puzzle:
+// - no effective rules configured => 1
+// - rules exist but not evaluated yet => 0
+// - evaluated => 1 only if all passed
+const getSpecialRulesBinary = (rec: StudentRecord, pid: string): number => {
+  return getSpecialRulesBinaryForPuzzle({
+    examConfig: examStore.config,
+    puzzleId: pid,
+    specialRuleResults: rec.puzzle_results[pid]?.specialRuleResults,
+  });
 };
 
 const getStatusColorClass = (status: string) => {
@@ -668,6 +707,7 @@ const copyTable = async () => {
           (_, i) => `P${Number(pid) + 1}-S${i + 1}`,
         ),
       ),
+  ...puzzleIds.value.map((pid) => `P${Number(pid) + 1}-SR`),
       "Puzzles",
       "Passed Subtasks",
       "Score",
@@ -681,10 +721,15 @@ const copyTable = async () => {
           getAggregatedStatus(r, pid, i),
         );
       });
+
+      const specialRuleCells = puzzleIds.value.map((pid) =>
+        String(getSpecialRulesBinary(r, pid)),
+      );
       return [
         r.student_ID,
         r.student_name,
         ...puzzleCells,
+        ...specialRuleCells,
         r.puzzle_amount,
         r.passed_subtask_amount,
         formulaOutputs.value[r.id],
