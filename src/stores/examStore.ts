@@ -29,7 +29,7 @@ const puzzleSchema = z.object({
     .array(
       z.object({
         id: z.string(),
-        type: z.enum(["regex", "use", "composite"]),
+        type: z.enum(["regex", "use", "composite", "nestedLoop"]),
         constraint: z.enum(["MUST_HAVE", "MUST_NOT_HAVE"]),
         message: z.string(),
         severity: z.enum(["info", "warn"]).optional(),
@@ -56,7 +56,7 @@ export const examConfigSchema = z.object({
     .array(
       z.object({
         id: z.string(),
-        type: z.enum(["regex", "use", "composite"]),
+        type: z.enum(["regex", "use", "composite", "nestedLoop"]),
         constraint: z.enum(["MUST_HAVE", "MUST_NOT_HAVE"]),
         message: z.string(),
         severity: z.enum(["info", "warn"]).optional(),
@@ -120,9 +120,16 @@ export const useExamStore = defineStore("exam", {
         await axios.put(`${BASE_URL}/config`, config);
         this.config = config;
       } catch (err: any) {
+        // Try to surface server-side validation errors (body.message or body.error)
         console.error("Error updating config", err);
-        this.error = err.message || "Failed to update configuration";
-        throw err;
+        const serverMsg =
+          err?.response?.data?.message ||
+          (err?.response?.data && JSON.stringify(err.response.data)) ||
+          err.message ||
+          "Failed to update configuration";
+        this.error = serverMsg;
+        // throw a new Error so callers (UI) receive a readable message
+        throw new Error(serverMsg);
       } finally {
         this.isLoading = false;
       }
