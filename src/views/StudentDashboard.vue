@@ -13,7 +13,7 @@ const searchID = ref("");
 const selectedTestCase = ref<any>(null);
 const deviceInfo = ref<{ ip: string; mac: string } | null>(null);
 const cryptoExisting = ref(false);
-const refreshInterval = 10000; // 10 seconds
+const refreshInterval = 100000; // 100 seconds
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
