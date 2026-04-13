@@ -13,7 +13,7 @@ const searchID = ref("");
 const selectedTestCase = ref<any>(null);
 const deviceInfo = ref<{ ip: string; mac: string } | null>(null);
 const cryptoExisting = ref(false);
-const refreshInterval = 100000; // 100 seconds
+const refreshInterval = 10000; // 10 seconds
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
@@ -26,8 +26,8 @@ const refreshStudentData = async () => {
   await Promise.all([
     dashboardStore.fetchStudentScore(searchID.value),
     dashboardStore.fetchStudentCode(searchID.value),
-    getUserDeviceInfo({studentID: searchID.value}),
-    userStore.isUserCryptoExisting(searchID.value).then(exists => {
+    getUserDeviceInfo({ studentID: searchID.value }),
+    userStore.isUserCryptoExisting(searchID.value).then((exists) => {
       cryptoExisting.value = exists;
     }),
   ]);
@@ -47,9 +47,15 @@ const stopAutoRefresh = () => {
   }
 };
 
+const currentDisplayID = ref("");
+
 const handleSearch = async () => {
   if (!searchID.value.trim()) return;
-  dashboardStore.clearCurrentStudent();
+
+  if (currentDisplayID.value !== searchID.value) {
+    dashboardStore.clearCurrentStudent();
+    currentDisplayID.value = searchID.value;
+  }
 
   await refreshStudentData();
   startAutoRefresh();
@@ -81,7 +87,7 @@ const handleDeleteUserCrypto = async () => {
   if (!searchID.value) return;
   if (
     !confirm(
-      `Are you sure you want to delete the crypto for student ${searchID.value}? This action cannot be undone.`
+      `Are you sure you want to delete the crypto for student ${searchID.value}? This action cannot be undone.`,
     )
   )
     return;
@@ -269,112 +275,200 @@ const getStatusCodeBg = (status: string) => {
       "
       class="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6"
     >
-   
       <!-- Student Header -->
       <div
         class="bg-gradient-to-r from-white to-blue-50 rounded-xl p-6 shadow-sm border border-gray-200 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6"
       >
         <div class="flex-1">
-          <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-3 mb-4">
-        {{ dashboardStore.currentStudentScore?.student_name || "Student" }}
-        <span
-          class="text-lg font-mono text-blue-600 bg-blue-100 px-3 py-1.5 rounded-md font-medium"
-          >{{ searchID }}</span
-        >
+          <h1
+            class="text-3xl font-bold text-gray-900 flex items-center gap-3 mb-4"
+          >
+            {{ dashboardStore.currentStudentScore?.student_name || "Student" }}
+            <span
+              class="text-lg font-mono text-blue-600 bg-blue-100 px-3 py-1.5 rounded-md font-medium"
+              >{{ searchID }}</span
+            >
           </h1>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
-        <span class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          <span class="font-medium">Last submitted:</span>
-          <span class="font-mono">{{ formatTime(dashboardStore.currentStudentScore?.last_submit_time) }}</span>
-        </span>
-        <span v-if="dashboardStore.currentStudentScore" class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-500">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-          <span class="font-medium">Passed:</span>
-          <span class="font-bold text-emerald-600">{{ dashboardStore.currentStudentScore.passed_subtask_amount }}/{{ dashboardStore.currentStudentScore.subtask_amount }}</span>
-        </span>
-        <span v-if="dashboardStore.currentStudentScore" class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500">
-            <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-            <path d="M16 3h-1a4 4 0 0 0-4 4v1" />
-          </svg>
-          <span class="font-mono text-xs">{{ deviceInfo?.ip || "Unknown" }} | {{ deviceInfo?.mac || "Unknown" }}</span>
-        </span>
-        <span v-if="dashboardStore.currentStudentScore" class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-100">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :class="cryptoExisting ? 'text-green-500' : 'text-red-500'">
-            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z" />
-            <path d="M12 6v6l4 2" />
-          </svg>
-          <span class="font-medium">Crypto:</span>
-          <span :class="cryptoExisting ? 'text-green-600 font-bold' : 'text-red-600 font-bold'">{{ cryptoExisting ? "✓ Existing" : "✕ Missing" }}</span>
-        </span>
+          <div
+            class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600"
+          >
+            <span
+              class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-blue-500"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span class="font-medium">Last submitted:</span>
+              <span class="font-mono">{{
+                formatTime(dashboardStore.currentStudentScore?.last_submit_time)
+              }}</span>
+            </span>
+            <span
+              v-if="dashboardStore.currentStudentScore"
+              class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-emerald-500"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+              <span class="font-medium">Passed:</span>
+              <span class="font-bold text-emerald-600"
+                >{{
+                  dashboardStore.currentStudentScore.passed_subtask_amount
+                }}/{{ dashboardStore.currentStudentScore.subtask_amount }}</span
+              >
+            </span>
+            <span
+              v-if="dashboardStore.currentStudentScore"
+              class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="text-amber-500"
+              >
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                <path d="M16 3h-1a4 4 0 0 0-4 4v1" />
+              </svg>
+              <span class="font-mono text-xs"
+                >{{ deviceInfo?.ip || "Unknown" }} |
+                {{ deviceInfo?.mac || "Unknown" }}</span
+              >
+            </span>
+            <span
+              v-if="dashboardStore.currentStudentScore"
+              class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-gray-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                :class="cryptoExisting ? 'text-green-500' : 'text-red-500'"
+              >
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+              <span class="font-medium">Crypto:</span>
+              <span
+                :class="
+                  cryptoExisting
+                    ? 'text-green-600 font-bold'
+                    : 'text-red-600 font-bold'
+                "
+                >{{ cryptoExisting ? "✓ Existing" : "✕ Missing" }}</span
+              >
+            </span>
           </div>
         </div>
         <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
           <button
-        @click="handleJudge"
-        :disabled="dashboardStore.isJudging"
-        class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
+            @click="handleJudge"
+            :disabled="dashboardStore.isJudging"
+            class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
           >
-        <svg
-          v-if="!dashboardStore.isJudging"
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
-        <svg
-          v-else
-          class="animate-spin h-4 w-4 text-white"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
-          ></circle>
-          <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          ></path>
-        </svg>
-        {{ dashboardStore.isJudging ? 'Re-judging…' : 'Re-Judge' }}
+            <svg
+              v-if="!dashboardStore.isJudging"
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polygon
+                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+              />
+            </svg>
+            <svg
+              v-else
+              class="animate-spin h-4 w-4 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            {{ dashboardStore.isJudging ? "Re-judging…" : "Re-Judge" }}
           </button>
           <div
-          v-if="dashboardStore.judgeError"
-          class="sm:self-center text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-md"
-          role="alert"
+            v-if="dashboardStore.judgeError"
+            class="sm:self-center text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-md"
+            role="alert"
           >
-          {{ dashboardStore.judgeError }}
+            {{ dashboardStore.judgeError }}
           </div>
           <button
-        @click="handleDeleteUserCrypto"
-        :disabled="dashboardStore.isLoading"
-        class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
+            @click="handleDeleteUserCrypto"
+            :disabled="dashboardStore.isLoading"
+            class="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
           >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 6h18M9 6v12m6-12v12M4 6l1 14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2l1-14" />
-        </svg>
-        Delete Crypto
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M3 6h18M9 6v12m6-12v12M4 6l1 14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2l1-14"
+              />
+            </svg>
+            Delete Crypto
           </button>
         </div>
       </div>

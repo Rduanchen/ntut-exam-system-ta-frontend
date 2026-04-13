@@ -46,7 +46,6 @@ export const useStudentDashboardStore = defineStore("studentDashboard", {
     async fetchStudentCode(studentID: string) {
       this.isLoading = true;
       this.error = null;
-      this.currentStudentCode = null;
       try {
         const response = await axios.post(`${BASE_URL}/code`, { studentID });
         if (response.data?.success) {
@@ -63,7 +62,6 @@ export const useStudentDashboardStore = defineStore("studentDashboard", {
     async fetchStudentScore(studentID: string) {
       this.isLoading = true;
       this.error = null;
-      this.currentStudentScore = null;
       try {
         const response = await axios.get(`${BASE_URL}/scoreboard/student`, {
           params: { studentID },
