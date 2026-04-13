@@ -13,7 +13,7 @@ const searchID = ref("");
 const selectedTestCase = ref<any>(null);
 const deviceInfo = ref<{ ip: string; mac: string } | null>(null);
 const cryptoExisting = ref(false);
-const refreshInterval = 10000; // 10 seconds
+const refreshInterval = 100000; // 100 seconds
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
@@ -517,7 +517,7 @@ const getStatusCodeBg = (status: string) => {
     <Teleport to="body">
       <div
         v-if="selectedTestCase"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
         @click.self="closeModal"
       >
         <div

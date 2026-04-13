@@ -10,7 +10,7 @@ type UseParams = { target: string };
 type CompositeOp = "AND" | "OR";
 
 type CompositeRuleChild = {
-  type: "regex" | "use" | "composite";
+  type: "regex" | "use" | "composite" | "nestedLoop";
   params: unknown;
 };
 
@@ -21,7 +21,7 @@ type CompositeParams = {
 
 type BaseRule = {
   id: string;
-  type: "regex" | "use" | "composite";
+  type: "regex" | "use" | "composite" | "nestedLoop";
   constraint: Constraint;
   message: string;
   severity?: "info" | "warn";
@@ -36,6 +36,7 @@ const props = defineProps<{
 // These operate directly on `rule.params` (mutating parent state via reference).
 const isRegex = computed(() => props.rule.type === "regex");
 const isUse = computed(() => props.rule.type === "use");
+const isNestedLoop = computed(() => (props.rule as any).type === "nestedLoop");
 const isComposite = computed(() => props.rule.type === "composite");
 
 function ensureRegexParams(): RegexParams {
@@ -61,7 +62,7 @@ function ensureCompositeParams(): CompositeParams {
   p.rules = p.rules
     .filter(
       (c: any) =>
-        c && (c.type === "regex" || c.type === "use" || c.type === "composite"),
+        c && (c.type === "regex" || c.type === "use" || c.type === "composite" || c.type === "nestedLoop"),
     )
     .map((c: any) => {
       const child: CompositeRuleChild = {
@@ -89,6 +90,10 @@ function ensureCompositeParams(): CompositeParams {
           op: (cp as any).op === "OR" ? "OR" : "AND",
           rules: Array.isArray((cp as any).rules) ? (cp as any).rules : [],
         } satisfies CompositeParams;
+      }
+
+      if (c.type === "nestedLoop") {
+        child.params = {};
       }
 
       return child;
@@ -233,6 +238,10 @@ function removeCompositeChild(index: number) {
           :disabled="disabled"
         />
       </div>
+    </div>
+
+    <div v-else-if="isNestedLoop" class="mt-2 text-sm text-gray-500">
+      This rule detects nested loops (for/while/do) in C-like languages. No parameters are required.
     </div>
 
     <div v-else class="mt-2 text-sm text-gray-500">Unknown rule type.</div>

@@ -237,6 +237,7 @@
                     <option value="regex">regex</option>
                     <option value="use">use</option>
                     <option value="composite">composite</option>
+                    <option value="nestedLoop">nestedLoop</option>
                   </select>
                 </div>
                 <div>
@@ -524,6 +525,7 @@
                         <option value="regex">regex</option>
                         <option value="use">use</option>
                         <option value="composite">composite</option>
+                        <option value="nestedLoop">nestedLoop</option>
                       </select>
                     </div>
                     <div>
@@ -1097,6 +1099,12 @@ function onRuleTypeChange(rule: SpecialRule, nextType: SpecialRule["type"]) {
     return;
   }
 
+  if (nextType === "nestedLoop") {
+    // nestedLoop currently has no parameters
+    rule.params = {};
+    return;
+  }
+
   // composite
   rule.params = { op: "AND", rules: [] };
 }
@@ -1163,7 +1171,8 @@ async function saveFullConfig() {
     if (err instanceof ZodError) {
   alert("Validation Failed: " + (err.issues[0]?.message ?? "Unknown error"));
     } else {
-      alert("Failed to save configuration.");
+  // Show backend error message when available
+  alert("Failed to save configuration: " + ((err as any)?.message ?? "Unknown error"));
     }
   }
 }
